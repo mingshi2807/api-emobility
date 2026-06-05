@@ -1,0 +1,273 @@
+ 
+openapi: 3.0.0
+info:
+  description: >-
+    This document describes the HTTP/WS API for the EVSE version of Charge-Broker. 
+  version: 1.0.0
+  title: Evse-Charge-Broker HTTP/WS API Documentation
+  termsOfService: '#'
+  contact:
+    email: contact@trialog.com
+  license:
+    name: Trialog
+    url: 'https://trialog.com/'
+
+servers:
+  - url: http://192.168.200.113/api
+    
+tags:
+  - name: Meter Power
+    description: Fetch the EVSE meter Power value
+  - name: Meter Current
+    description: Fetch the EVSE meter Current value
+  - name: Meter Voltage
+    description: Fetch the EVSE meter Voltage value
+  - name: Charge Limits
+    description: Fetch the EVSE Charge Limits
+  - name: Discharge Limits
+    description: Fetch the EVSE Discharge limits
+  - name: Transaction
+    description: Fetch EVSE transaction details
+
+paths:
+  /broker/meter/power:
+    get:
+      description: Fetch the EVSE meter Power value
+      tags: 
+        - Meter Power
+
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/power"
+            
+  /broker/meter/current:
+    get:
+      description: Fetch the EVSE current value
+      tags: 
+        - Meter Current
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/current"            
+                
+  /broker/meter/voltage:
+    get:
+      tags:
+        - Meter Voltage
+      description: Fetch the EVSE voltage value
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/voltage"
+    
+  /broker/charge-limits:
+    get:
+      tags:
+        - Charge Limits
+      description: Get the EVSE charge limits
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/charge-limits"
+
+  /broker/discharge-limits:
+    get:
+      tags:
+        - Discharge Limits
+      description: Fetch the EVSE discharge limits
+      responses:
+        "202":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/discharge-limits"
+      
+  /broker/transaction:
+    get:
+      tags:
+        - Transaction
+      description: Fetch the EVSE transaction details
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transaction"
+
+components:
+  schemas:
+    power:
+      type: object
+      properties:
+        apparent:
+          type: object
+          properties:
+            total: 
+              type: integer
+              description: Fetch the EVSE total apparent power value in W
+            l1: 
+              type: integer
+              description: Fetch the EVSE phase l1 apparent power value in W
+            l2: 
+              type: integer
+              description: Fetch the EVSE phase l2 apparent power value in W
+            l3: 
+              type: integer
+              description: Fetch the EVSE phase l3 apparent power value in W
+   
+    current:
+      type: object
+      properties:
+        rms:
+          type: object
+          properties:
+            total: 
+              type: number
+              format: double
+              description: Fetch the EVSE total rms current value in A
+            l1: 
+              type: number
+              format: double
+              description: Fetch the EVSE phase l1 rms current value in A
+            l2: 
+              type: number
+              format: double     
+              description: Fetch the EVSE phase l2 rms current value in A
+            l3: 
+              type: number
+              format: double      
+              description: Fetch the EVSE phase l3 rms current value in A
+        
+    voltage:
+     type: object
+     properties:
+        rms:
+          type: object
+          properties:
+            total: 
+              type: integer
+              description: Fetch the EVSE total rms voltage value in V
+            l1: 
+              type: integer
+              description: Fetch the EVSE phase l1 rms voltage value in V
+            l2: 
+              type: integer
+              description: Fetch the EVSE phase l2 rms voltage value in V
+            l3: 
+              type: integer
+              description: Fetch the EVSE phase l3 rms voltage value in V
+
+    charge-limits:
+      type: object
+      properties:
+        currentMax:
+          description: Maximum charge current in A
+          type : number
+          format: double
+        currentMin:
+          description: Minimum charge current in A
+          type : number
+          format: double
+        powerMax:
+          description: Maximum charge power in W
+          type : integer
+        powerMin:
+          description: Minimum charge power in W
+          type : integer
+        voltageMax:
+          description: Maximum charging voltage in V
+          type : integer
+    
+    discharge-limits:
+      type: object
+      properties:
+        currentMax:
+          description: Maximum discharge current in A
+          type : number
+          format: double
+        currentMin:
+          description: Minimum discharge current in A
+          type : number
+          format: double
+        powerMax:
+          description: Maximum discharge power in W
+          type : integer
+        powerMin:
+          description: Minimum discharge power in W
+          type : integer
+        voltageMax:
+          description: Maximum discharge voltage in V
+          type : integer
+
+  
+    transaction:
+      type: object
+      properties:
+          start:
+            description: Beginning date of the charging session in the format YYYY-MM-DDTHH:mm:ss/ YYYY-MM-DDTHH:mm:ssTZD 
+            type: string
+            format: date-time
+          stop:
+            description: End date of the charging session in the format YYYY-MM-DDTHH:mm:ss/ YYYY-MM-DDTHH:mm:ssTZD 
+            type: string  
+            format: date-time
+          energyCharged:
+            type: object
+            properties:
+              apparent:
+                type: object
+                properties:
+                  total: 
+                      type: number
+                      format: double       
+                      description: Fetch the EVSE total Energy charged in VAh
+                  l1: 
+                      type: number
+                      format: double
+                      description: Fetch the EVSE phase l1 Energy charged in VAh
+                  l2: 
+                      type: number
+                      format: double
+                      description: Fetch the EVSE phase l2 Energy charged in VAh
+                  l3: 
+                      type: number   
+                      format: double
+                      description: Fetch the EVSE phase l3 Energy charged in VAh
+          energyDischarged:
+            type: object
+            properties:
+              apparent:
+                type: object
+                properties:
+                  total: 
+                      type: number
+                      format: double
+                      description: Fetch the EVSE total Energy discharged in VAh
+                  l1: 
+                      type: number
+                      format: double
+                      description: Fetch the EVSE phase l1 Energy discharged in VAh
+                  l2: 
+                      type: number
+                      format: double
+                      description: Fetch the EVSE phase l2 Energy discharged in VAh
+                  l3: 
+                      type: number  
+                      format: double
+                      description: Fetch the EVSE phase l3 Energy discharged in VAh
+    

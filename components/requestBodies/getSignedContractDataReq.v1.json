@@ -1,0 +1,11 @@
+{
+  "description": "Signed contract data lookup request.",
+  "content": {
+    "application/json": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  }
+}

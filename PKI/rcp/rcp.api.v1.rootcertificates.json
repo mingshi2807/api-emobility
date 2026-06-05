@@ -1,0 +1,105 @@
+{
+    "get": {
+        "summary": "GetRootCertificates",
+        "description": "Get root certificates from the RCP based on (optional) query input.",
+        "operationId": "getRootCertificatesV1",
+        "tags": [
+            "GetRootCertificates"
+        ],
+        "parameters": [
+            {
+                "$ref": "../../components/parameters/headers/opncFromPartyType.v1.json"
+            },
+            {
+                "$ref": "../../components/parameters/headers/opncFromPartyId.v1.json"
+            },
+            {
+                "$ref": "../../components/parameters/headers/opncToPartyType.v1.json"
+            },
+            {
+                "$ref": "../../components/parameters/headers/opncToPartyId.v1.json"
+            },
+            {
+                "in": "query",
+                "name": "pkiType",
+                "description": "Optional parameter to filter for root certificates from V2G, eMSP or OEM PKI.",
+                "schema": {
+                "$ref": "../../components/parameters/pkiTypeParam.v1.json"
+                }
+            }
+        ],
+        "responses": {
+            "200": {
+                "description": "OK",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "../../components/responses/getRootCertificatesRes.v1.json"
+                        }
+                    }
+                }
+            },
+            "400": {
+                "description": "Bad Request",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "../../components/schemas/error.v1.json"
+                        }
+                    }
+                }
+            },
+            "401": {
+                "description": "Unauthorized"
+                },
+            "403": {
+                "description": "Forbidden"
+            },
+            "404": {
+                "description": "Not Found",
+                "content": {
+                    "application/json": {
+                    "schema": {
+                        "$ref": "../../components/schemas/error.v1.json"
+                    },
+                    "examples": {
+                        "ROOT NOT FOUND": {
+                        "value": {
+                            "errorMessages": [
+                            "Root certificate with the given ID is not found"
+                            ],
+                            "traceId": "c52fe6ad-1e39-4f6e-a0d0-e2d51aacf09f"
+                        }
+                        }
+                    }
+                    }
+                }
+            },
+            "500": {
+                "description": "Internal Server Error"
+            },
+            "502": {
+                "description": "Bad Gateway"
+            },
+            "503": {
+                "description": "Service Unavailable"
+            }
+        }
+    },
+    "put": {
+        "summary": "Save a root certificate in the RCP.",
+        "operationId": "putRootCertificateV1",
+        "description": "Expects a Root Certificate Object and the Root Type.\nThis Function should not be called by other parties than the Root Certificate Pool operator to prevent possible wrong usage. Each Root CA in a Plug&Charge Ecosystem must be audited/checked upfront. All parties of the Plug&Charge Ecosystem need to relay on this audits of the different PKI Operators or consumers.\nA 2 Factor authorization in the organization shall be considered to add a Root CA into the RCP",
+        "tags": [
+            "PutRootCertificate"
+        ],
+        "requestBody": {
+            "$ref": "../../components/requestBodies/putRootCertificateReq.v1.json"
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+    }
+}

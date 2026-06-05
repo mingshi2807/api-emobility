@@ -1,0 +1,831 @@
+openapi: 3.1.0
+info:
+  title: Vedecom eMobility ERM Platform API
+  version: 0.0.2
+  description: |
+    Unified API surface for IAM, Catalog, and Releases. Versioned under /v1.
+servers:
+  - url: http://localhost:8080
+    description: Dev
+  - url: https://staging-api.vedecom.org
+    description: Staging
+  - url: https://api.vedecom.org
+    description: Production
+security:
+  - OAuth2: [read, write]
+tags:
+  - name: IAM
+    description: Tenants, users, roles & policies
+  - name: Catalog
+    description: Software enablers & taxonomy
+  - name: Releases
+    description: Versions, changelogs, artifacts
+
+x-tagGroups:
+  - name: IAM
+    tags: [IAM]
+  - name: Catalog
+    tags: [Catalog]
+  - name: Releases
+    tags: [Releases]
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.vedecom.org/oauth/authorize
+          tokenUrl: https://auth.vedecom.com/oauth/token
+          scopes:
+            read: Read access
+            write: Write access
+
+  parameters:
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        trace_id:
+          type: string
+
+    Page:
+      type: object
+      properties:
+        items:
+          type: array
+          items: {}
+        next_cursor:
+          type:
+            - string
+            - 'null'
+
+    # IAM
+    Tenant:
+      type: object
+      required: [id, name, slug, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+        status:
+          type: string
+          enum: [active, suspended]
+          default: active
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    TenantCreate:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, display_name, active, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        active:
+          type: boolean
+          default: true
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    UserCreate:
+      type: object
+      required: [email, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        role_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UserUpdate:
+      type: object
+      properties:
+        display_name:
+          type: string
+        active:
+          type: boolean
+        role_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    Role:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    RoleCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    # Catalog
+    Enabler:
+      type: object
+      required: [id, tenant_id, slug, name, visibility]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        summary:
+          type: string
+        visibility:
+          type: string
+          enum: [private, internal, public]
+          default: private
+        tags:
+          type: array
+          items:
+            type: string
+        owners:
+          type: array
+          items:
+            type: string
+            format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    EnablerCreate:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        summary:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/Enabler/properties/visibility'
+        tags:
+          type: array
+          items:
+            type: string
+        owners:
+          type: array
+          items:
+            type: string
+            format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+
+    EnablerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        summary:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/Enabler/properties/visibility'
+        tags:
+          type: array
+          items:
+            type: string
+        owners:
+          type: array
+          items:
+            type: string
+            format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # Releases
+    Release:
+      type: object
+      required: [id, enabler_id, version, status, channel]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        enabler_id:
+          type: string
+          format: uuid
+        version:
+          type: string
+          pattern: '^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$'
+        status:
+          type: string
+          enum: [draft, published, deprecated]
+        channel:
+          type: string
+          enum: [alpha, beta, rc, stable]
+        changelog:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        published_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    ReleaseCreate:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+        channel:
+          $ref: '#/components/schemas/Release/properties/channel'
+        status:
+          $ref: '#/components/schemas/Release/properties/status'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ReleaseUpdate:
+      type: object
+      properties:
+        channel:
+          $ref: '#/components/schemas/Release/properties/channel'
+        status:
+          $ref: '#/components/schemas/Release/properties/status'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Change:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [feature, fix, chore, docs]
+        description:
+          type: string
+
+    Artifact:
+      type: object
+      required: [id, kind, url, sha256]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [container_image, binary, sbom, signature, other]
+        url:
+          type: string
+          format: uri
+        sha256:
+          type: string
+          pattern: '^[A-Fa-f0-9]{64}$'
+        size_bytes:
+          type: integer
+        media_type:
+          type: string
+        signature_ref:
+          type:
+            - string
+            - 'null'
+          format: uri
+        provenance:
+          type: object
+          additionalProperties: true
+
+paths:
+  # IAM
+  /v1/tenants:
+    get:
+      summary: List tenants
+      tags: [IAM]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Tenants page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Tenant'
+    post:
+      summary: Create tenant
+      tags: [IAM]
+      security:
+        - OAuth2: [write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /v1/users:
+    get:
+      summary: List users
+      tags: [IAM]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Users page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+    post:
+      summary: Create user
+      tags: [IAM]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /v1/users/{id}:
+    get:
+      summary: Get user
+      tags: [IAM]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update user
+      tags: [IAM]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete user
+      tags: [IAM]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  # Catalog
+  /v1/enablers:
+    get:
+      summary: List enablers
+      tags: [Catalog]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: q
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Enablers page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Enabler'
+    post:
+      summary: Create enabler
+      tags: [Catalog]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnablerCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enabler'
+
+  /v1/enablers/{id}:
+    get:
+      summary: Get enabler
+      tags: [Catalog]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enabler'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update enabler
+      tags: [Catalog]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnablerUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enabler'
+    delete:
+      summary: Delete enabler
+      tags: [Catalog]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  # Releases
+  /v1/enablers/{id}/releases:
+    get:
+      summary: List enabler releases
+      tags: [Releases]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Releases page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Release'
+    post:
+      summary: Create enabler release
+      tags: [Releases]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+
+  /v1/releases/{rid}:
+    get:
+      summary: Get release
+      tags: [Releases]
+      security:
+        - OAuth2: [read]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: rid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update release
+      tags: [Releases]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: rid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+    delete:
+      summary: Delete release
+      tags: [Releases]
+      security:
+        - OAuth2: [write]
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: rid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted

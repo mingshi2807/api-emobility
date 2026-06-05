@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "Endpoint creation request.",
+  "additionalProperties": true
+}

@@ -1,0 +1,940 @@
+openapi: 3.0.0
+info:
+  description: >-
+    <strong>ComboCS</strong>, the CCS Simulator and Tester made by <em>TRIALOG</em>, offers an <strong>HTTP/WS API</strong> to communicate with ComboCS for test automation. 
+    <br /><br />
+    This document describe the HTTP/WS API for both EV and EVSE versions of ComboCS. Resources only available for one version is indicated as "Only available for EV/EVSE ComboCS" in the rest of the document. Aller <code>GET</code> methods are also available as WebSocket notifications.
+  version: 1.0.0
+  title: ComboCS HTTP/WS API Documentation
+  termsOfService: '#'
+  contact:
+    email: contact@trialog.com
+  license:
+    name: Trialog
+    url: 'https://trialog.com/'
+
+servers:
+  - url: http://192.168.200.113/api
+    
+tags:
+  - name: EV settings
+    description: Fetch and update the EV state 
+  - name: System
+    description: Fetch and update the ComboCS system configuration
+  - name: Use cases
+    description: Fetch and launch the CCS test cases
+  - name: Security
+    description: Fetch and update the ComboCS securiry configuration for TLS and PnC
+  - name: Actions
+    description: Trigger high level actions supported by DIN 70121 and ISO/IEC 15118
+  - name: EV ComboCS
+    description: Routes that are only available for ComboCS in EVCC mode
+  - name: EVSE ComboCS
+    description: Routes that are only available for ComboCS in SECC mode
+paths:
+  /ccs/system:
+    get:
+      description: Fetch the current ComboCS system configuration
+      tags: 
+        - System
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComboCSSystemState"
+            
+  /ccs/state:
+    get:
+      description: Fetch the current system state
+      tags: 
+        - System
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComboCSState"            
+                
+  /ccs/settings:
+    get:
+      tags:
+        - System
+      description: Fetch the current ComboCS's EVCC/SECC configuration
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComboCSSettings"
+
+  /ccs/security-settings:
+    get:
+      tags:
+        - System
+        - Security
+      description: Fetch the current ComboCS security settings for TLS and PnC
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComboCSSecuritySettings"
+
+  /ccs/ev/charge-settings:
+    get:
+      tags:
+        - EV settings
+      description: Fetch the ComboCS's current charge settings
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvChargeSettings"
+  
+  /ccs/ev/ac-charge-params:
+    get:
+      tags:
+        - EV settings
+      description: Fetch the ComboCS's current AC charge parameters to be used during Charging Loop
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvAcChargeParams"
+
+  /ccs/ev/dc-charge-params:
+    get:
+      tags:
+        - EV settings
+      description: Fetch the ComboCS's current DC charge parameters to be used during Charging Loop
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvDcChargeParams"
+
+  /ccs/ev/power-schedule:
+    get:
+      tags:
+        - EV settings
+      description: Fetch the current EV power schedule (i.e. PowerDeliveryReq ChargingProfile)
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PowerSchedule"
+
+  /ccs/evse/charge-settings:
+    get:
+      tags:
+        - EVSE settings
+      description: Fetch the current EVSE charge settings
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvseChargeSettings"
+
+  /ccs/evse/ac-charge-params:
+    get:
+      tags:
+        - EVSE settings
+      description: Fetch the current EVSE AC charge parameters to be used during Charging Loop
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvseAcChargeParams"
+
+  /ccs/evse/dc-charge-params:
+    get:
+      tags:
+        - EVSE settings
+      description: Fetch the current EVSE DC to be used during Charging Loop
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvseDcChargeParams"
+
+  /ccs/evse/sa-schedules:
+    get:
+      tags:
+        - EVSE settings
+      description: Fetch the current EVSE SASchedules
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaSchedules"
+    
+  /ccs/evse/meter-info:
+    get:
+      tags:
+        - EVSE settings
+        - EVSE ComboCS
+      description: Fetch the current EVSE meter data
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema: 
+                $ref: "#/components/schemas/MeterInfo"
+
+components:
+  schemas:
+    ComboCSSystemInfo:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date of the system (ISO 8601)
+
+    ComboCSSystemState:
+      type: object
+      properties:
+        state:
+          type: boolean
+          description: State of the simulator (on/off). Always equal to true.
+        debug:
+          type: boolean
+          description: true if the ComboCS is in debug mode.
+        version:
+          type: string
+          description: Version string that identifies the current ComboCS version
+        behaviour:
+          $ref: "#/components/schemas/system-behaviour"
+    
+    ComboCSState:
+      type: object
+      properties:
+        behaviour: 
+          $ref: "#/components/schemas/system-behaviour"
+        state:
+          $ref: "#/components/schemas/system-state"
+        stateDetails:
+          type: string
+          description: String description of the ComboCS's current state
+        error:
+          $ref: "#/components/schemas/system-error"
+        errorDetails:
+          type: string
+          description: String description of the provided error code
+        commState:
+          $ref: "#/components/schemas/system-comm-state"
+        commStateDetails:
+          type: string
+          description: String description of the provided communication state
+        lastMessage:
+          $ref: "#/components/schemas/system-last-message"
+        lastMessageDetails:
+          type: string
+          description: String description of the provided last message identifier
+        cp:
+          $ref: "#/components/schemas/system-control-pilot"
+        pwm:
+          $ref: "#/components/schemas/system-pwm"
+        cpEnabled:
+          type: boolean
+          description: Indicates if the Control Pilot state measurement is enabled
+        pp:
+          type: integer
+          description: Measured cable capacity. Only present if the Control Pilot state measurements are enabled
+        bridgeInspectionMode:
+          type: boolean
+          description: true if the Inspection mode is enabled
+  
+    ComboCSSettings:
+      type: object
+      properties:
+        supportedTransportProtocols:
+          $ref: "#/components/schemas/system-transport-protocols"
+        supportedProtocols:
+          $ref: "#/components/schemas/system-protocols"
+        supportedPayments:
+          $ref: "#/components/schemas/system-payments"
+        supportedServices:
+          $ref: "#/components/schemas/system-services"
+        supportedChargeTypes:
+          $ref: "#/components/schemas/system-charge-types"
+        supportedControlModes:
+          $ref: "#/components/schemas/system-control-modes"
+        interface:
+          type: string
+          description: Network interface used for the communication 
+        schedulerInterval:
+          type: integer
+        checkIec61851:
+          type: boolean
+        stateBEmergencyStop:
+          type: boolean
+          description: Indicates if an Emergency stop is executed in case of an unexpected State B
+        tcpOnPncDisabled:
+          type: boolean
+          description: todo 
+        evPowerProfileEnabled:
+          type: boolean
+        weldingDetectionEnabled:
+          type: boolean
+        infinitePreCharge:
+          type: boolean
+        infiniteWeldingDetection:
+          type: boolean
+        checkCertNotYetValid:
+          type: boolean
+        batteryVoltage:
+          type: integer
+          description: Configured battery voltage (in V)
+        resistor:
+          type: integer
+          description: Configured resistance value (in Ohms)
+    
+    ComboCSSecuritySettings:
+      type: object
+      properties:
+        pkiType:
+          type: string
+          description: PKI configuration type
+          enum: ["simple", "complex"]
+        certificatesDir:
+          type: string
+          description: Path to the certificates' directory (on the ComboCS system)
+        certPath:
+          type: string
+          description: Complete path to the certificates' folder
+        pkeyPath:
+          type: string
+          description: Complete path to the private keys' folder
+        v2gRootCert:
+          type: string
+          description: File name of the root V2G certificate
+        moRootCert:
+          type: string
+          description: File name of the root MO certificate
+        oemRootCert:
+          type: string
+          description: File name of the root OEM certificate
+        pcid:
+          type: string
+          description: File name of the OEM private key
+        oemProvCertChain:
+          type: string
+        oemProvCertPkey:
+          type: string
+        emaid:
+          type: string
+        contractCertChain:
+          type: string
+        contractCertPkey:
+          type: string
+        contractCertStatus:
+          type: string
+        passphrase:
+          type: string
+          description: Passphrase for the private key file 
+        
+    EvChargeSettings:
+      type: object
+      properties:
+        evvcId:
+          type: string
+          description: ComboCS EVCC identifier
+        sessionId:
+          type: string
+          description: Current charge session ID
+        contractId:
+          type: string
+          description: eMAID
+        selectedTransportProtocol:
+          $ref: "#/components/schemas/system-transport-protocol"
+        selectedPayment:
+          $ref: "#/components/schemas/system-payment"
+        selectedChargeType:
+          $ref: "#/components/schemas/system-charge-type"
+        selectedServiceId:
+          $ref: "#/components/schemas/system-service"
+        selectedControlMode:
+          $ref: "#/components/schemas/system-control-mode"
+        maxSupportingPonts:
+          type: integer
+          description: Corresponds to ChargeParameterDiscoveryReq/MaxEntriesSAScheduleTuple
+        chargeCurrentMax:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/AC_EVChargeParameter/EVMaximumCurrentLimit
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVMaximumCurrentLimit
+            (in mA)
+        dischargeCurrentMax:
+          type: integer
+        chargeCurrentMin:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/AC_EVChargeParameter/EVMinimumCurrentLimit
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVMinimumCurrent (in ISO/IEC 15118-20)
+            or ChargeParameterDiscoveryReq/AC_EVChargeParameter/EVMinimumCurrent (in ISO/IEC 15118-20)
+            (in mA)*
+        dischargeCurrentMin:
+          type: integer
+        voltageMax:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVMaximumVoltageLimit
+            or ChargeParameterDiscoveryReq/AC_EVChargeParameter/EVMaximumVoltageLimit (in V)
+        voltageMin:
+          type: integer
+        chargePowerMax:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVMaximumPowerLimit
+            or ChargeParameterDiscoveryReq/AC_EVChargeParameter/EVMaximumPowerLimit
+            (in W)
+        dischargePowerMax:
+          type: integer
+        chargePowerMin:
+          type: integer
+        target:
+          $ref: "#/components/schemas/EvChargeTarget"
+  
+    EvChargeTarget:
+      type: object
+      properties:
+        energyTarget:
+          $ref: "#/components/schemas/EvEnergyTarget"
+        duration:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/AC_EVChargeParameter/DepartureTime 
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/DepartureTime 
+            (only for ISO 15118-2) (in s)
+        fullSoc:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/DC_EVChargeParameter/FullSOC 
+            (in %, DC only)
+        bulkSoc:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/DC_EVChargeParameter/BulkSOC 
+            (in %, DC only)
+  
+    EvEnergyTarget:
+      type: object
+      properties:
+        energy:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/AC_EVChargeParameter/EAmount
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVEnergyRequest (in ISO/IEC 15118-2)
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVEnergyTarget (in ISO/IEC 15118-20)
+            or ChargeParameterDiscoveryReq/AC_EVChargeParameter/EVEnergyTarget (in ISO/IEC 15118-20)
+            (in Wh) 
+        energyMin:
+          type: integer
+        energyMax:
+          type: integer
+          description: >
+            Corresponds to ChargeParameterDiscoveryReq/AC_EVChargeParameter/EAmount
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVEnergyCapacity (in ISO/IEC 15118-2)
+            or ChargeParameterDiscoveryReq/DC_EVChargeParameter/EVEnergyMaxRequest (in ISO/IEC 15118-20)
+            (in Wh)
+  
+    EvAcChargeParams:
+      type: object
+      properties:
+        energyTarget:
+          $ref: "#/components/schemas/EvEnergyTarget"
+        chargeCurrentMax:
+          type: integer
+        dischargeCurrentMax:
+          type: integer
+        chargeCurrentMin:
+          type: integer
+        dischargeCurrentMin:
+          type: integer
+        chargePowerMax:
+          type: integer
+        dischargePowerMax:
+          type: integer
+        presentActivePower:
+          type: integer
+        presentReactivePower:
+          type: integer
+        displayParams:
+          $ref: "#/components/schemas/display-parameters-map"
+  
+    EvDcChargeParams:
+      type: object
+      properties:
+        energyTarget:
+          $ref: "#/components/schemas/EvEnergyTarget"
+        current:
+          type: integer
+          description: (in mA)
+        chargeCurrentMax:
+          type: integer
+          description: (in mA)
+        dischargeCurrentMax:
+          type: integer
+        voltage:
+          type: integer
+          description: (in V)
+        voltageMax:
+          type: integer
+          description: (in V)
+        voltageMin:
+          type: integer
+          description: (in V)
+        chargePowerMax:
+          type: integer
+          description: (in W)
+        dischargePowerMax:
+          type: integer
+          description: (in W)
+        displayParams:
+          $ref: "#/components/schemas/display-parameters-map"
+  
+    EvseChargeSettings:
+      type: object
+      properties:
+        evseId:
+          type: string
+          description: EVSE identifier
+        tcpPort:
+          type: integer
+          description: Port used for communicating with the EVSE
+        supportedTransportProtocols:
+          $ref: "#/components/schemas/system-transport-protocols"
+        supportedProtocols:
+          $ref: "#/components/schemas/system-protocols"
+        supportedPayments:
+          $ref: "#/components/schemas/system-payments"
+        supportedChargeTypes:
+          $ref: "#/components/schemas/system-charge-types"
+        supportedServices:
+          $ref: "#/components/schemas/system-services"
+        supportedControlModes:
+          $ref: "#/components/schemas/system-control-modes"
+        chargeCurrentMax:
+          type: integer
+          description: in mA
+        dischargeCurrentMax:
+          type: integer
+          description: in mA
+        chargeCurrentMin:
+          type: integer
+          description: in mA
+        dischargeCurrentMin:
+          type: integer
+          description: in mA
+        voltageNominal:
+          type: integer
+          description: in V
+        voltageMin:
+          type: integer
+          description: in V
+        chargePowerMax:
+          type: integer
+          description: in W
+        dischargePowerMax:
+          type: integer
+          description: in W
+        currentPeakRipple:
+          type: integer
+          description: in mA
+        currentRegTolerance:
+          type: integer
+          description: in mA
+        frequency:
+          type: integer
+          description: in Hz
+        energyToBeDelivered:
+          type: integer
+          description: in Wh
+        date:
+          type: string
+  
+    EvseAcChargeParams:
+      type: object
+      properties:
+        targetActivePowerMax:
+          type: integer
+          description: in W
+        targetReactivePowerMax:
+          type: integer
+          description: in W
+        targetFrequency:
+          type: integer
+          description: in Hz
+  
+    EvseDcChargeParams:
+      type: object
+      properties:
+        current:
+          type: integer
+        voltage:
+          type: integer
+        chargeCurrentMax:
+          type: integer
+        dischargeCurrentMax:
+          type: integer
+        voltageMax:
+          type: integer
+        voltageMin:
+          type: integer
+        chargePowerMax:
+          type: integer
+        dischargePowerMax:
+          type: integer
+        currentLimitAchieved:
+          type: boolean
+        voltageLimitAchieved:
+          type: boolean
+        powerLimitAchieved:
+          type: boolean
+        cableLocked:
+          type: boolean
+        isolationStatus:
+          type: integer
+          description: Corresponds to DC_EVSEStatus/EVSEIsolationStatus
+        status:
+          type: integer
+          description: Corresponds to DC_EVSEStatus/EVSEStatusCode
+  
+    
+    UseCases:
+      type: array
+      items:
+        $ref: "#/components/schemas/UseCase"
+    
+    UseCase:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Use case's id
+        title:
+          type: string
+          description: Short description of the use case's behaviour
+        desc:
+          type: string
+          description: Long description of the use case
+        expected:
+          type: string
+          description: Long description of what behaviour is expected from the use case
+  
+    CurrentUseCase:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Use case's id
+        title:
+          type: string
+          description: Short description of the use case's behaviour
+        desc:
+          type: string
+          description: Long description of the use case
+        expected:
+          type: string
+          description: Long description of what behaviour is expected from the use case
+        state:
+          $ref: "#/components/schemas/use-case-state"
+        stateDetails:
+          type: string
+          description: String description of the state of the current use case
+          enum:
+            - None
+            - Preamble
+            - Pending
+            - Postamble
+            - Success
+            - Fail
+            - Inconclusive
+            - Cancel
+            - Error
+        steps:
+          type: array
+          items:
+            type: string
+          description: List of the steps (description) that have been executed in the test case
+  
+    MeterInfo:
+      type: object
+      properties:
+        meterId:
+          type: string
+        meterReadingCharged:
+          type: integer
+        meterReadingDischarged:
+          type: integer
+        meterStatus:
+          type: integer
+        sigMeterReading:
+          type: string
+        timestamp:
+          type: integer
+
+    MeterInfoWithReceiptRequired:
+      allOf:
+        - $ref: "#/components/schemas/MeterInfo"
+        - type: object
+          properties:
+            receiptRequired: 
+              type: boolean
+    SaSchedules:
+      type: array
+      items:
+        $ref: "#/components/schemas/SaSchedule"
+  
+    SaSchedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        chargingPowerSchedule:
+          $ref: "#/components/schemas/PowerSchedule"
+        dischargingPowerSchedule:
+          $ref: "#/components/schemas/PowerSchedule"
+        chargingTariffSchedule:
+          $ref: "#/components/schemas/TariffSchedule"
+        dischargingTariffSchedule:
+          $ref: "#/components/schemas/TariffSchedule"
+  
+    PowerSchedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        defaultPower:
+          type: integer
+        duration:
+          type: integer
+        schedule:
+          type: array
+          items:
+            type: object
+            properties:
+              start:
+                type: integer
+              power:
+                type: integer
+    
+    TariffSchedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        salesTariffId:
+          type: integer
+        description:
+          type: string
+        lastPrice:
+          type: integer
+        nbOfPriceLevel:
+          type: integer
+        duration:
+          type: integer
+        schedule:
+          type: array
+          items:
+            type: object
+            properties:
+              start:
+                type: integer
+              price:
+                type: integer
+
+    system-behaviour:
+      type: string
+      description: Indicates if the ComboCS operates as an EV or EVSE
+      enum: [ "secc", "evcc" ]
+      
+    system-state:
+      type: integer
+      description: ComboCS state (todo describe each value)
+      enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    
+    system-error:
+      type: integer
+      description: ComboCS error code (todo describe each value)
+      
+    system-comm-state:
+      type: integer
+      description: ComboCS commnucation state
+      
+    system-last-message:
+      type: integer
+      description: Identifies the last message sent by the ComboCS
+      
+    system-control-pilot:
+      type: string
+      description: Control Pilot state according to IEC 61851
+      enum: ["A", "B", "C", "D", "E", "F"]
+      
+    system-pwm:
+      type: integer
+      description: PWM accoding to IEC 61851
+        
+    system-transport-protocols:
+      type: array
+      items:
+        $ref: "#/components/schemas/system-transport-protocol"
+        
+    system-transport-protocol:
+      type: string
+      description: Transport-layer configuration
+      enum:
+        - Not Selected
+        - TCP
+        - TLS
+    
+    system-protocols:
+      type: array
+      items:
+        $ref: "#/components/schemas/system-protocol"
+    
+    system-protocol:
+      type: string
+      description: Communication protocols that can be supported by the ComboCS
+      enum:
+        - urn:iso:15118:2:2013:MsgDef
+        - urn:iso:15118:2:2017:MsgDef
+        - urn:iso:15118:2:2018:MsgDef
+        - urn:din:70121:2012:MsgDef
+        
+    system-payments:
+      type: array
+      items:
+        $ref: "#/components/schemas/system-payment"
+        
+    system-payment:
+      type: string
+      description: Payment types that can be supported by the ComboCS
+      enum:
+        - PnC
+        - EIM
+  
+    system-charge-types:
+      type: array
+      items:
+        $ref: "#/components/schemas/system-charge-type"
+        
+    system-charge-type:
+      type: string
+      description: Charge types that can be supported by the ComboCS
+      enum:
+        - AC_1
+        - AC_3
+        - DC_CORE
+        - DC_EXTENDED
+        - DC_DUAL2
+        - DC_DUAL4
+        - WPT
+        - Not Selected
+        - NOT_SELECTED
+        
+    system-control-modes:
+      type: array
+      items:
+        $ref: "#/components/schemas/system-control-mode"
+        
+    system-control-mode:
+      type: string
+      description: Control modes that can be supported by the ComboCS
+      enum:
+        - Schedule
+        - Dynamic
+        - Not Selected
+        
+    system-services:
+      type: array
+      items:
+        $ref: "#/components/schemas/system-service"
+    
+    system-service:
+      type: string
+      description: Charge services that can be supported by the ComboCS
+      enum:
+        - AC_CHARGING
+        - DC_CHARGING
+        - AC_BIDIRCHARGING
+        - DC_BIDIRCHARGING
+        - CERTIFICATE
+        - Not Selected
+    
+    use-case-state:
+      type: integer
+      description: State of a ComboCS use-case
+      enum: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  
+    display-parameters-map:
+      type: object
+      properties:
+        CurrentRange:
+          type: integer
+          description: (in km)
+        CurrentSOC:
+          type: integer
+          description: (in %)
+        TargetSOC:
+          type: integer
+          description: (in %)
+        MaximumSOC:
+          type: integer
+          description: (%in %)
+        MinimumSOC:
+          type: integer
+          description: (in %)
+        BulkSOC:
+          type: integer
+          description: (in %)
+        RemainingTimeToTargetSOC:
+          type: integer
+          description: (in s)
+        RemainingTimeToMaximumSOC:
+          type: integer
+          description: (in s)
+        RemainingTimeToMinimumSOC:
+          type: integer
+          description: (in s)
+        RemainingTimeToBulkSOC:
+          type: integer
+          description: (in s)
+        BulkChargingComplete:
+          type: boolean
+        ChargingComplete:
+          type: boolean
+        InletHot:
+          type: boolean
+
+    Iec61851Configuration:
+      type: object
+      properties:
+        pwm:
+          type: integer
+        cp:
+          type: string
+        pp:
+          type: integer

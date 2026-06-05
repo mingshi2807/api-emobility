@@ -1,0 +1,75 @@
+extends:
+  - recommended
+
+rules:
+  no-path-trailing-slash: warn
+
+logo:
+  srcSet: "./logo-vedecom.png light, ./logo-vedecom-dark.png dark"
+  altText: VEDECOM logo
+  link: "https://vedecom.fr"
+  favicon: ./favicon-vedecom.png
+
+apis:
+  erm@v1:
+    root: ./ERM/openapi.yaml
+  hems@v1:
+    root: ./HEMS/hems.yaml
+  obc@v1:
+    root: ./OBC/openapi.yaml
+  ocpp-ocpi@v1:
+    root: ./OCPP_OCPI/openapi.yaml
+  openadr@v1:
+    root: ./OpenADR/openapi-bundle.yml
+  ev-virtualizer@v1:
+    root: ./ev-virtualizer/ev-virtualizer.yaml
+  charge-point@v1:
+    root: ./charge-point/charge-point-api.yaml
+  pki-ccp@v1:
+    root: ./PKI/ccp/ccp.api.v1.json
+  pki-cps@v1:
+    root: ./PKI/cps/cps.api.v1.json
+  pki-event@v1:
+    root: ./PKI/event/event.api.v1.json
+  pki-pcp@v1:
+    root: ./PKI/pcp/pcp.api.v1.json
+  pki-pki@v1:
+    root: ./PKI/pki/pki.api.v1.json
+  pki-rcp@v1:
+    root: ./PKI/rcp/rcp.api.v1.json
+
+openapi:
+  requiredPropsFirst: true
+  pathInMiddlePanel: true
+  hideHostname: false
+  expandResponses: "200,201"
+  jsonSampleExpandLevel: 2
+  payloadSampleIdx: 0
+  showObjectSchemaExamples: true
+  generateCodeSamples:
+    languages:
+      - lang: curl
+      - lang: JavaScript
+        label: fetch
+      - lang: Python
+      - lang: Go
+  theme:
+    colors:
+      primary:
+        main: "#0F766E"
+      success:
+        main: "#0ea5e9"
+    typography:
+      fontSize: "16"
+      fontFamily: "Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+      headings:
+        fontWeight: "600"
+    rightPanel:
+      backgroundColor: "#0b1021"
+      textColor: "#ffffff"
+
+# (Later) Resolve settings when pulling remote $refs
+# resolve:
+#   http:
+#     headers:
+#       Authorization: "Bearer ${REDOCLY_TOKEN}"

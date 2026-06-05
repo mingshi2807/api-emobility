@@ -1,0 +1,1408 @@
+openapi: 3.1.0
+info:
+  title: DSO CPO interface NL
+  version: 2.1.0
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+  description: |
+    **The bundled openadr3-openapi-stripped.yml file must be used when generating client or server interfaces from the OpenAPI specification.** **This document includes GAC-specific constraints layered on top of that OpenADR 3 specification. As such, any client or server generated from this specification is not fully compliant with the standard OpenADR 3 protocol. Please use the bundled openadr3-openapi-stripped.yml file for generation to ensure full OpenADR 3 compliance.**
+
+    The DSO CPO interface NL provides a partial implementation of the OpenADR 3.1 specification in order to facilitate a communication mechanism between the DSO and CPO to reduce peak loads on the grid caused by electric vehicles charging at charging stations. The DSO CPO interface NL specification is developed and maintained by ElaadNL. For more details please refer to the "Demand Response Program Grid Aware Charging" version 1.1 document.
+    The example URL is a suggestion, except for the major version number.
+
+    All IDS are fictitious, the eMI3 id used is NL-EAV (Arnhem EV), the EAN18 number used is 8716922000005. The DSO name used is Lightning Grid Services Inc. or Lightning with the identifier LIGHTNING.
+
+    The API includes the following capabilities and operations:
+
+    __Manage vens:__
+
+    * Create/Update/Delete vens
+    * Search vens
+
+    __Manage programs:__
+
+    * Create/Update/Delete a program
+    * Search programs
+
+    __Manage events:__
+
+    * Create/Delete an event
+    * Search events
+servers:
+  - url: https://api.yourcompany.nl/openadr3
+    description: Production
+paths:
+  /vens:
+    get:
+      tags:
+        - vens
+      summary: search vens
+      operationId: searchVens
+      description: |
+        List all vens.
+        May filter results by venName as query param.
+        May filter results by targets params.
+        Use skip and pagination query params to limit response size.
+
+        This request requires the `read_ven_objects` permission, which is typically granted to VENs automatically. This permission ensures that the VEN is only able to
+        see objects that it is associated with.
+
+        For BL clients, the `read_all` permission is required, which allows the client to see all objects.
+      security:
+        - oAuth2ClientCredentials:
+            - read_ven_objects
+        - bearerAuth: []
+      parameters:
+        - name: venName
+          in: query
+          description: Indicates ven objects w venName
+          required: false
+          schema:
+            type: string
+        - name: targets
+          in: query
+          description: Indicates targets
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              examples:
+                - <EAN18-1>
+                - <EAN18-2>
+        - name: skip
+          in: query
+          description: number of records to skip for pagination.
+          required: false
+          style: form
+          explode: true
+          schema:
+            minimum: 0
+            type: integer
+            format: int32
+        - name: limit
+          in: query
+          description: maximum number of records to return.
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 50
+            minimum: 0
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ven'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '500':
+          $ref: '#/components/responses/500'
+    post:
+      tags:
+        - vens
+      summary: create ven
+      operationId: createVen
+      description: |
+        Create a new ven.
+
+        For a VEN creating its own VEN object, the `write_vens` scope must be present inside the access token used to make the request.
+        For a BL client creating a VEN object, the `write_vens_bl` scope must be present inside the access token used to make the request.
+      security:
+        - oAuth2ClientCredentials:
+            - write_vens
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ven'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ven'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '500':
+          $ref: '#/components/responses/500'
+  /vens/{venID}:
+    parameters:
+      - name: venID
+        in: path
+        schema:
+          $ref: '#/components/schemas/objectID'
+        description: object ID of ven.
+        required: true
+    get:
+      tags:
+        - vens
+      summary: search vens by ID
+      operationId: searchVenByID
+      description: Return the ven specified by venID specified in path.
+      security:
+        - oAuth2ClientCredentials:
+            - read_ven_objects
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ven'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+    put:
+      tags:
+        - vens
+      summary: update  ven
+      operationId: updateVen
+      description: |
+        Update the ven specified by venID specified in path.
+
+        For a VEN updating its own VEN object, the `write_vens` scope must be present inside the access token used to make the request.
+        For a BL client updating a VEN object, the `write_vens_bl` scope must be present inside the access token used to make the request.
+      security:
+        - oAuth2ClientCredentials:
+            - write_vens
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ven'
+        description: ven item to update.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ven'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+    delete:
+      tags:
+        - vens
+      summary: delete  ven
+      operationId: deleteVen
+      description: |
+        Delete the ven specified by venID specified in path.
+
+        For a VEN deleting its own VEN object, the `write_vens` scope must be present inside the access token used to make the request.
+        For a BL client deleting a VEN object, the `write_vens_bl` scope must be present inside the access token used to make the request.
+      security:
+        - oAuth2ClientCredentials:
+            - write_vens
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ven'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+  /events:
+    get:
+      tags:
+        - events
+      summary: searches all events
+      operationId: searchAllEvents
+      description: |
+        # List all events
+
+        Request **must** be filtered by `programID` and MAY be filtered by `targets`. The `targets` filter is used to filter events by the point of common couplings (EAN18) they target.
+
+        For only `program` filtering, use:
+        * `programID` = `<your-program-id>`
+
+        For target filtering, use:
+        * `programID` = `<your-program-id>`
+        * `targets` = [`<EAN18-1>`, <EAN-18-2>], 
+
+        Note:
+        * No unfiltered request are allowed at present.
+        * Use skip and pagination query params to limit response size.
+
+        This request requires the `read_targets` permission for VENs. For BL clients, the `read_all` permission is required.
+      security:
+        - oAuth2ClientCredentials:
+            - read_targets
+        - bearerAuth: []
+      parameters:
+        - name: programID
+          in: query
+          schema:
+            $ref: '#/components/schemas/objectID'
+          required: false
+          description: filter results to events with programID.
+          example: 46f5cc75-2bf0-4d41-a0ca-f439c84b5cc4
+        - name: targets
+          in: query
+          description: Indicates targets
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              examples:
+                - <EAN18-1>
+                - <EAN18-2>
+        - name: skip
+          in: query
+          description: number of records to skip for pagination.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - name: limit
+          in: query
+          description: maximum number of records to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            maximum: 50
+            minimum: 0
+        - name: active
+          in: query
+          description: ignore events that have transpired.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/event'
+              examples:
+                getAllEventsContinuous:
+                  summary: Continuous format.
+                  $ref: '#/components/examples/events-continuous'
+                getAllEventsSeparated:
+                  summary: Separated format.
+                  $ref: '#/components/examples/events-separated'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problem'
+              examples:
+                badRequest:
+                  $ref: '#/components/examples/problem400BadRequestEvents'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problem'
+              examples:
+                badForbidden:
+                  $ref: '#/components/examples/problem403ForbiddenEvents'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problem'
+              examples:
+                internalServerError:
+                  $ref: '#/components/examples/problem500InternalServerErrorEvents'
+    post:
+      tags:
+        - events
+      summary: create an event
+      operationId: createEvent
+      description: |
+        # Create a new event.
+
+        This endpoint requires the `write_events` permission in the provided access
+        token, how this is implemented differs per OpenADR 3 implementation.
+
+        For OpenLEADR-rs, the `write_events` scope must either be present in the `scope` claim or the `roles` claim of the access token used to make the request.
+        See the addendum in the GAC specification for the required structure of the claim in the access token.
+      security:
+        - oAuth2ClientCredentials:
+            - write_events
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/event'
+              description: The VTN-provided fields (id, createdAtDateTime, modificationDateTime, objectType) do not need to be provided.
+        description: Event item to add.
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/event'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+  /events/{eventID}:
+    parameters:
+      - name: eventID
+        in: path
+        schema:
+          $ref: '#/components/schemas/objectID'
+        description: object ID of event.
+        required: true
+    get:
+      tags:
+        - events
+      summary: search events by ID
+      operationId: searchEventsByID
+      description: |
+        Fetch event associated with the eventID in path.
+      security:
+        - oAuth2ClientCredentials:
+            - read_targets
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/event'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+    put:
+      tags:
+        - events
+      summary: update an event
+      operationId: updateEvent
+      description: Update the event specified by the eventID in path.
+      security:
+        - oAuth2ClientCredentials:
+            - write_events
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/event'
+        description: event item to update.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/event'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+    delete:
+      tags:
+        - events
+      summary: delete an event
+      operationId: deleteEvent
+      description: |
+        Delete the event specified by the eventID in path.
+      security:
+        - oAuth2ClientCredentials:
+            - write_events
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/event'
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+  /programs:
+    get:
+      tags:
+        - programs
+      summary: searches all programs
+      operationId: searchAllPrograms
+      description: |
+        List all programs known to the server.
+        May filter results by targets params.
+        Use skip and pagination query params to limit response size.
+
+        This endpoint requires the `read_targets` permission, which is typically granted to VENs automatically.
+        For BL clients, the `read_all` permission is required.
+      security:
+        - oAuth2ClientCredentials:
+            - read_targets
+        - bearerAuth: []
+      parameters:
+        - name: targets
+          in: query
+          description: Indicates targets
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              examples:
+                - <EAN18-1>
+                - <EAN18-2>
+        - name: skip
+          in: query
+          description: number of records to skip for pagination.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - name: limit
+          in: query
+          description: maximum number of records to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            maximum: 50
+            minimum: 0
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/program'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+    post:
+      tags:
+        - programs
+      summary: create a program
+      operationId: createProgram
+      description: Create a new program in the server.
+      security:
+        - oAuth2ClientCredentials:
+            - write_programs
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/program'
+        description: program item to add.
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/program'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+  /programs/{programID}:
+    parameters:
+      - name: programID
+        in: path
+        schema:
+          $ref: '#/components/schemas/objectID'
+        required: true
+        description: Object ID of the program object.
+    get:
+      tags:
+        - programs
+      summary: searches programs by program ID
+      operationId: searchProgramByProgramId
+      description: |
+        Fetch the program specified by the programID in path.
+      security:
+        - oAuth2ClientCredentials:
+            - read_targets
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/program'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+    put:
+      tags:
+        - programs
+      summary: update a program
+      operationId: updateProgram
+      description: Update an existing program with the programID in path.
+      security:
+        - oAuth2ClientCredentials:
+            - write_programs
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/program'
+        description: program item to update.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/program'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+    delete:
+      tags:
+        - programs
+      summary: delete a program
+      operationId: deleteProgram
+      description: Delete an existing program with the programID in path.
+      security:
+        - oAuth2ClientCredentials:
+            - write_programs
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/program'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '500':
+          $ref: '#/components/responses/500'
+  /auth/token:
+    post:
+      security: []
+      tags:
+        - Auth
+      summary: fetch a token
+      operationId: fetchToken
+      description: |
+        Performs the OAuth client credentials grant to authenticate the application
+        and return an access token.
+
+
+        This endpoint is intended to be used only as a proxy to an external OAuth
+        authorization server (useful in cases where the authorization server must
+        not be externally accessible for example).
+
+
+        Some implementations of OpenADR 3 (such as openleadr-rs) use an internal
+        authorization server when this endpoint is used with corrosponding internal
+        user management, such implementations MAY not be used outside of testing.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/clientCredentialRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/clientCredentialResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+        '501':
+          $ref: '#/components/responses/501'
+  /auth/server:
+    get:
+      security: []
+      tags:
+        - Auth
+      summary: fetch server info
+      operationId: getAuthServerInfo
+      description: Return the URL of the token endpoint.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/authServerInfo'
+        '500':
+          $ref: '#/components/responses/500'
+components:
+  securitySchemes:
+    oAuth2ClientCredentials:
+      type: oauth2
+      description: |
+        Proxied client credentials flow to an external OAuth authorization server through the /auth/token endpoint of the VTN.
+        While scopes can be passed, it is not typical for a client credential flow to only grant a subset of the scopes available to the client.
+        The client credential flow is typically used for machine to machine communication, and the client possesses the secret to authenticate already, so arbitrarily
+        limiting the scopes of the token to a subset available to the client makes little sense. For this reason, many identity providers (such as auth0) will simply ignore the
+        scopes parameter for client credential grant requests.
+      flows:
+        clientCredentials:
+          tokenUrl: auth/token
+          scopes:
+            read_all: This scope allows the client to read from all (REST) resources within the VTN
+            write_vens: This scope allows a client to create, update and delete VEN's in the VTN, subsequently, this permission allows a client to create, update and delete subresources associated with a VEN
+            write_programs: This scope allows a client to create, update and delete programs in the VTN
+            write_events: This scope allows a client to create, update and delete events in the VTN
+            ORGANIZATION_SPECIFIC_SCOPES: Any scopes which may be organization specific, see the description for why including scopes in the request may be unnecessary.
+    bearerAuth:
+      description: |
+        Bearer token authentication to the VTN, which will typically be used if the OAuth authorization server is externally accessible to the CPO's,
+        allowing them to provision their own access tokens without going through the VTN proxy endpoint.
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    VTN-objectID:
+      type: string
+      pattern: ^[a-zA-Z0-9_.-]*$
+      minLength: 1
+      maxLength: 128
+      description: URL safe VTN assigned object ID.
+      examples:
+        - 3e76248f-4a18-45b3-80ab-9e466d4467a0
+      format: uuid
+      readOnly: true
+    VTN-dateTime:
+      type: string
+      format: date-time
+      description: datetime in ISO 8601 format
+      examples:
+        - '2023-06-15T09:30:00Z'
+      readOnly: true
+    ven:
+      type: object
+      description: Ven represents a client with the ven role.
+      required:
+        - venName
+      properties:
+        id:
+          $ref: '#/components/schemas/VTN-objectID'
+        createdDateTime:
+          $ref: '#/components/schemas/VTN-dateTime'
+        modificationDateTime:
+          $ref: '#/components/schemas/VTN-dateTime'
+        objectType:
+          type: string
+          description: Used as discriminator.
+          enum:
+            - VEN
+          readOnly: true
+        venName:
+          type: string
+          description: |
+            MUST be the valid eMI3 identifier of the CPO, as specified in CPO identifiers.
+          minLength: 1
+          maxLength: 128
+          examples:
+            - NL-AEV
+    problem:
+      type: object
+      description: |
+        reusable error response. From https://opensource.zalando.com/problem/schema.yaml.
+      properties:
+        type:
+          type: string
+          format: uri
+          description: |
+            An absolute URI that identifies the problem type.
+            When dereferenced, it SHOULD provide human-readable documentation for the problem type
+            (e.g., using HTML).
+          default: about:blank
+          examples:
+            - https://zalando.github.mio/problem/constraint-violation
+        title:
+          type: string
+          description: |
+            A short, summary of the problem type. Written in english and readable
+            for engineers (usually not suited for non technical stakeholders and
+            not localized); example: Service Unavailable.
+        status:
+          type: integer
+          format: int32
+          description: |
+            The HTTP status code generated by the origin server for this occurrence
+            of the problem.
+          minimum: 100
+          exclusiveMaximum: 600
+          examples:
+            - 503
+        detail:
+          type: string
+          description: |
+            A human readable explanation specific to this occurrence of the
+            problem.
+          examples:
+            - Connection to database timed out
+        instance:
+          type: string
+          format: uri
+          description: |
+            An absolute URI that identifies the specific occurrence of the problem.
+            It may or may not yield further information if dereferenced.
+    objectID:
+      type: string
+      pattern: ^[a-zA-Z0-9_.-]*$
+      minLength: 1
+      maxLength: 128
+      description: URL safe VTN assigned object ID.
+      examples:
+        - 3e76248f-4a18-45b3-80ab-9e466d4467a0
+      format: uuid
+    eventBase:
+      type: object
+      description: |
+        Event object to communicate a Demand Response request to VEN.
+        If intervalPeriod is present, sets default start time and duration of intervals.
+      required:
+        - programID
+        - intervals
+      properties:
+        id:
+          $ref: '#/components/schemas/VTN-objectID'
+        createdDateTime:
+          $ref: '#/components/schemas/VTN-dateTime'
+        modificationDateTime:
+          $ref: '#/components/schemas/VTN-dateTime'
+        objectType:
+          type: string
+          description: Used as discriminator
+          enum:
+            - EVENT
+          readOnly: true
+        programID:
+          $ref: '#/components/schemas/objectID'
+        eventName:
+          type:
+            - 'null'
+            - string
+          description: User defined string for use in debugging or User Interface.
+          examples:
+            - Lightning - AEV default schedule
+        targets:
+          type: array
+          description: A list of targets representing points of common coupling (EAN18)
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+            description: One or more targeted points of common couplings (EAN18).
+            example: EAN-18-1
+        payloadDescriptors:
+          type: array
+          description: A list of payloadDescriptor objects.
+          items:
+            type: object
+            description: |
+              Contextual information used to interpret event valuesMap values.
+            properties:
+              payloadType:
+                type: string
+                enum:
+                  - IMPORT_CAPACITY_LIMIT
+                description: Enumerated or private string signifying the nature of values. MUST be IMPORT_CAPACITY_LIMIT (might be expanded in the future)
+                examples:
+                  - IMPORT_CAPACITY_LIMIT
+              units:
+                type: string
+                enum:
+                  - KW
+                description: Units of measure. MUST be KW
+                examples:
+                  - KW
+    intervalId:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: A client generated number assigned an interval object. Not a sequence number (in other words, client cannot use it to determine order of intervals). Should be an incrementing integer.
+          examples:
+            - 0
+    dateTime:
+      type: string
+      format: date-time
+      description: datetime in ISO 8601 format with UTC timezone (Zulu time)
+      examples:
+        - '2023-06-15T09:30:00Z'
+    duration:
+      type: string
+      pattern: ^(-?)P(?=\d|T\d)(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)([DW]))?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$
+      description: duration in ISO 8601 format
+      examples:
+        - PT15M
+    intervalPeriod:
+      type: object
+      description: |
+        Defines temporal aspects of intervals.
+      required:
+        - start
+      properties:
+        start:
+          $ref: '#/components/schemas/dateTime'
+        duration:
+          $ref: '#/components/schemas/duration'
+    valuesMap:
+      type: object
+      description: |
+        Represents one or more values associated with a type.
+      required:
+        - type
+        - values
+      properties:
+        type:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: |
+            Enumerated or private string signifying the nature of values.
+          examples:
+            - IMPORT_CAPACITY_LIMIT
+        values:
+          type: array
+          description: A list of data points. Most often a singular value such as a price.
+          examples:
+            - - 10
+          items:
+            type: integer
+    separatedInterval:
+      type: object
+      description: |
+        An object defining a temporal window and a list of values.
+        intervalPeriod if present may set temporal aspects of interval or override event.intervalPeriod.
+      required:
+        - id
+        - payloads
+      allOf:
+        - $ref: '#/components/schemas/intervalId'
+        - type: object
+          properties:
+            intervalPeriod:
+              $ref: '#/components/schemas/intervalPeriod'
+            payloads:
+              type: array
+              description: A list of valuesMap objects.
+              items:
+                $ref: '#/components/schemas/valuesMap'
+    interval:
+      type: object
+      description: |
+        An object defining a temporal window and a list of values.
+        intervalPeriod if present may set temporal aspects of interval or override event.intervalPeriod.
+      required:
+        - id
+        - payloads
+      allOf:
+        - $ref: '#/components/schemas/intervalId'
+        - type: object
+          properties:
+            payloads:
+              type: array
+              description: A list of valuesMap objects.
+              items:
+                $ref: '#/components/schemas/valuesMap'
+    event:
+      oneOf:
+        - title: Separated format.
+          type: object
+          description: Separated format with separate intervalPeriod for each interval.
+          allOf:
+            - $ref: '#/components/schemas/eventBase'
+            - type: object
+              required:
+                - intervals
+              properties:
+                intervals:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/separatedInterval'
+        - title: Continuous format.
+          type: object
+          description: |
+            Continuous format. IntervalPeriod is defined in the event. Start time is for the first interval, 
+            duration for each interval (see chapter 7.3 of the OpenADR 3 user guide)
+          allOf:
+            - $ref: '#/components/schemas/eventBase'
+            - type: object
+              properties:
+                intervalPeriod:
+                  $ref: '#/components/schemas/intervalPeriod'
+                intervals:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/interval'
+    program:
+      type: object
+      description: Provides program specific metadata from VTN to VEN.
+      required:
+        - programName
+      properties:
+        id:
+          $ref: '#/components/schemas/VTN-objectID'
+        createdDateTime:
+          $ref: '#/components/schemas/VTN-dateTime'
+        modificationDateTime:
+          $ref: '#/components/schemas/VTN-dateTime'
+        objectType:
+          type: string
+          description: Used as discriminator
+          enum:
+            - PROGRAM
+          readOnly: true
+        programName:
+          type: string
+          description: Short name to uniquely identify program.
+          minLength: 1
+          maxLength: 128
+          examples:
+            - Lightning - Arnhem EV default program
+        retailerName:
+          type: string
+          description: Long name of program for human readability. MUST be the valid EAN13 identifier of the issuing DSO
+          examples:
+            - LIGHTNING
+        retailerLongName:
+          type:
+            - 'null'
+            - string
+          description: Short name of energy retailer providing the program. Should be the human-readable name of the issuing DSO
+          examples:
+            - Lightning Grid Services Inc.
+        programType:
+          type:
+            - 'null'
+            - string
+          description: A program defined categorization. MUST equal "DSO_CPO_INTERFACE-x.x.x, where x.x.x is the version as described in chapter Versioning
+          examples:
+            - DSO_CPO_INTERFACE-1.1.0
+        country:
+          type: string
+          description: Alpha-2 code per ISO 3166-1. Should be equal to NL, as for now the standard is only used in the Netherlands
+          examples:
+            - NL
+        programDescriptions:
+          type: array
+          description: A list of URLs to program descriptions. SHOULD be used to link to the program description document (when available)
+          items:
+            type: string
+          examples:
+            - - https://example.com/url/to/program/description
+        bindingEvents:
+          type: boolean
+          description: True if events are fixed once transmitted. MUST be set to true.
+          examples:
+            - true
+    clientCredentialRequest:
+      type: object
+      description: |
+        Body of POST request to /auth/token. Note snake case per https://www.rfc-editor.org/rfc/rfc6749
+      required:
+        - grant_type
+        - client_id
+        - client_secret
+      properties:
+        grant_type:
+          type: string
+          description: OAuth2 grant type, MUST be 'client_credentials'
+          examples:
+            - client_credentials
+          enum:
+            - client_credentials
+        client_id:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: client ID to exchange for bearer token.
+          examples:
+            - ven_client_99
+        client_secret:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: client secret to exchange for bearer token.
+          examples:
+            - ven_secret_99
+        scope:
+          type: string
+          minLength: 0
+          maxLength: 4096
+          description: application defined scope.
+          examples:
+            - read_all
+            - write_programs
+            - write_events
+    clientCredentialResponse:
+      type: object
+      description: |
+        Body response from /auth/token. Note snake case per https://www.rfc-editor.org/rfc/rfc6749
+      required:
+        - access_token
+        - token_type
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: access token provides by Authorization service
+          examples:
+            - MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3
+        token_type:
+          type: string
+          description: token type, must be Bearer.
+          examples:
+            - Bearer
+          enum:
+            - Bearer
+        expires_in:
+          type: integer
+          description: expiration period in seconds.
+          examples:
+            - 3600
+        scope:
+          type: string
+          minLength: 0
+          maxLength: 4096
+          description: application defined scope.
+          examples:
+            - read_all
+            - write_programs
+            - write_events
+    authServerInfo:
+      type: object
+      required:
+        - tokenURL
+      properties:
+        tokenURL:
+          type: string
+          format: uri
+          minLength: 2
+          maxLength: 8000
+          description: URL of the token endpoint.
+  responses:
+    '400':
+      description: Bad Request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+    '401':
+      description: Unauthorized.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+    '403':
+      description: Forbidden.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+    '404':
+      description: Not Found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+    '409':
+      description: Conflict. Implementation dependent response if event with same name already exists.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+    '500':
+      description: Internal Server Error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+    '501':
+      description: Not Implemented.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/problem'
+  examples:
+    events-continuous:
+      value:
+        - id: 0a015acb-76b1-4aaa-b304-68527e95fbb5
+          createdDateTime: '2025-01-14T13:00:00Z'
+          modificationDateTime: '2025-01-14T13:00:00Z'
+          objectType: EVENT
+          programID: dbb3ec95-d96d-449c-b991-154b77491bcd
+          eventName: Lightning - AEV default schedule
+          priority: null
+          targets:
+            - EAN87654321123456
+            - EAN123123123123123
+          intervalPeriod:
+            start: '2025-01-15T16:00:00Z'
+            duration: PT30M
+          payloadDescriptors:
+            - payloadType: IMPORT_CAPACITY_LIMIT
+              units: KW
+          intervals:
+            - id: 0
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 10
+            - id: 1
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 10
+            - id: 2
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 8
+            - id: 3
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 8
+            - id: 4
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 6
+            - id: 5
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 6
+            - id: 6
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 6
+            - id: 7
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 8
+            - id: 8
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 8
+            - id: 9
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 10
+            - id: 10
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 10
+    events-separated:
+      value:
+        - id: 0a015acb-76b1-4aaa-b304-68527e95fbb5
+          createdDateTime: '2025-01-14T13:00:00Z'
+          modificationDateTime: '2025-01-14T13:00:00Z'
+          objectType: EVENT
+          programID: dbb3ec95-d96d-449c-b991-154b77491bcd
+          eventName: Lightning - AEV default schedule (separated)
+          priority: null
+          targets:
+            - EAN87654321123456
+            - EAN123123123123123
+          payloadDescriptors:
+            - payloadType: IMPORT_CAPACITY_LIMIT
+              units: KW
+          intervals:
+            - id: 0
+              intervalPeriod:
+                start: '2025-01-15T16:00:00Z'
+                duration: PT1H
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 10
+            - id: 1
+              intervalPeriod:
+                start: '2025-01-15T17:00:00Z'
+                duration: PT1H
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 8
+            - id: 2
+              intervalPeriod:
+                start: '2025-01-15T18:00:00Z'
+                duration: PT1H30M
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 6
+            - id: 3
+              intervalPeriod:
+                start: '2025-01-15T19:30:00Z'
+                duration: PT1H
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 8
+            - id: 4
+              intervalPeriod:
+                start: '2025-01-15T20:30:00Z'
+                duration: PT1H
+              payloads:
+                - type: IMPORT_CAPACITY_LIMIT
+                  values:
+                    - 10
+    problem400BadRequestEvents:
+      summary: Bad Request
+      description: The request is missing a required parameter so the server can't proceed with the request.
+      value:
+        type: https://opensource.zalando.com/problem/constraint-violation/
+        title: Bad Request
+        status: 400
+        detail: Request is missing required parameter 'targetType'.
+        instance: https://api.yourcompany.nl/openadr3/events?targetValues=ab1aaceb-3630-4b25-af7e-75bb0bf13336
+    problem403ForbiddenEvents:
+      summary: Forbidden.
+      description: You do not have permission to access this resource.
+      value:
+        type: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/403
+        title: Forbidden
+        status: 403
+        detail: You are not allowed to view events of 'VEN_NAME' 'EXAMPLE-VEN-NAME'.
+        instance: https://api.yourcompany.nl/openadr3/events?targetType=VEN_NAME&targetValues=EXAMPLE-VEN-NAME
+    problem500InternalServerErrorEvents:
+      summary: Internal Server Error.
+      description: An unexpected error occurred. Please try again later.
+      value:
+        type: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/500
+        title: Internal Server Error
+        status: 500
+        detail: An unexpected error occurred. Please try again later.
+        instance: https://api.yourcompany.nl/openadr3/events?targetType=GROUP&targetValues=ab1aaceb-3630-4b25-af7e-75bb0bf13336

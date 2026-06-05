@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "description": "Endpoint update request.",
+  "additionalProperties": true
+}

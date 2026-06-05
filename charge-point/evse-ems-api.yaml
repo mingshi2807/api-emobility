@@ -1,0 +1,262 @@
+openapi: 3.0.0
+info:
+  description: >-
+    <strong>EVSE EMS Ctrl</strong>, the EVSE EMS Controller made by <em>TRIALOG</em>, offers an <strong>HTTP/WS API</strong> to control the Energy Management System.
+    <br /><br />
+    This document describes the "Controller" <strong>HTTP</strong> API for the EVSE EMS.
+    <br />
+    All <code>GET</code> methods are also available as <strong>WebSocket</strong> notifications using the <code>NOTIFY</code> action. WebSocket message format is:
+    <br />
+    <code>{
+      "action": "NOTIFY",
+      "uri": "ems",
+      "status": 200,
+      "data": {  "val1": 1 }
+    }
+    </code>
+  version: 1.0.0
+  title: EVSE EMS "Controller" HTTP/WS API Documentation
+  termsOfService: '#'
+  contact:
+    email: contact@trialog.com
+  license:
+    name: 'TRIALOG'
+    url: 'https://trialog.com/'
+
+servers:
+  - url: http://192.168.200.113/api
+    
+tags:
+  - name: EMS Control
+    description: Trigger EMS start.stop
+  - name: EMS Update
+    description: Update EMS profiles, schedules or setpoint
+  - name: EMS Mode
+    description: Fetch EMS control mode  
+
+    
+paths:
+  /ems/stop:
+    put:
+      tags:
+        - EMS Control
+      description: Stop the charge
+      responses:
+        "200":
+          description: Success
+
+  /ems/charging-profile:
+    get:
+      tags:
+        - EMS Update
+      description: Retrieve all installed charging profiles on the charging station
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetChargingProfilesRequestType"
+    put:
+      tags:
+        - EMS Update
+      description: Add one charging profile to the EMS
+      requestBody:
+        description: payload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/charging-profile'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/charging-profile"
+  /ems/charging-profile/{charging-profile-id}:
+    delete:
+      tags:
+        - EMS Update
+      description: Remove one charging profile from the EMS
+      parameters:
+        - name: charging-profile-id
+          in: path
+          required: true
+          description: Id of the charging-profile to be removed
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+  /ems/sa-schedule:
+    put:
+      tags:
+        - EMS Update
+      description: Update the EMS sa-schedule
+      requestBody:
+        description: payload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sa-schedule'
+      responses:
+        "200":
+          description: The update was successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/sa-schedule"
+  /ems/sa-schedule/{sa-schedule-id}:
+    delete:
+      tags:
+        - EMS Update
+      description: Remove one charging profile from the EMS
+      parameters:
+        - name: sa-schedule-id
+          in: path
+          required: true
+          description: Id of the sa-schedule to be removed
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+  /ems/set-point:
+    put:
+      tags:
+        - EMS Update
+      description: Update the EMS set-point
+      requestBody:
+        description: payload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/setpoint'
+      responses:
+        "200":
+          description: The update was successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/setpoint"
+
+  /ems/control-mode:
+    get:
+      tags:
+        - EMS Mode
+      description: Fetch the EMS control mode
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/control-mode"
+  /ems/composite-schedule:
+    get:
+      tags:
+        - EMS Update
+      description: Profile computed by the charging station based on all charging-profiles
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PowerScheduleType"
+components:
+  schemas:
+    charging-profile:
+      $ref: "#/components/schemas/PowerScheduleType"
+    sa-schedule:
+      type: object
+      description: Sa-Schedules
+      properties:
+        saScheduleId:
+          type: integer
+          description: sa schedule id
+        chargingPowerSchedule:
+            $ref: "#/components/schemas/PowerScheduleType"
+        dischargingPowerSchedule:
+            $ref: "#/components/schemas/PowerScheduleType"
+        chargingTariffSchedule:
+            $ref: "#/components/schemas/TariffScheduleType"
+        dischargingTariffSchedule:
+            $ref: "#/components/schemas/TariffScheduleType"
+    setpoint:
+      type: object
+      properties:
+        limit:
+          type: integer
+          description: Setpoint value in Watts
+     
+    control-mode:
+      type: string
+      description: The selected contol-mode of the EMS
+      enum: 
+      - CM_NOT_SELECTED
+      - Scheduled
+      - Dynamic
+    GetChargingProfilesRequestType:
+      type: object
+      properties:
+        chargingProfiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/charging-profile"
+    PowerScheduleType:
+      type: object
+      properties:
+        id:
+          type: integer
+        duration:
+          type: integer
+        defaultPower:
+          type: integer
+        startSchedule:
+          type: string
+          format: date-time
+          description: UTC date at which the schedule starts
+        schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/PowerEntriesType"
+    TariffScheduleType:        
+      type: object
+      properties:
+        saScheduleId:
+          type: integer
+        salesTariffId:
+          type: integer  
+        description:
+          type: string
+        nbOfPriceLevel:
+          type: integer
+        duration:
+          type: integer
+        lastPrice:
+          type: integer
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/TariffEntriesType"
+    PowerEntriesType:
+      type: object
+      properties:
+        start:
+          type: integer
+        power:
+          type: integer   
+    TariffEntriesType:
+      type: object
+      properties:
+        time:
+          type: integer
+        price:
+          type: integer
+    
+          

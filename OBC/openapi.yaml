@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: BOBC
+  version: 0.0.1
+  description: Bidirectional On Board Charger (BOBC) Remote Control
+tags:
+  - name: config
+    description: Configuration of the BOBC
+  - name: charge
+    description: Charge parameters
+  - name: status
+    description: Statuses of the BOBC
+servers:
+  - url: http://localhost:8080
+    description: Local tests (localhost)
+  - url: http://127.0.0.1:8080
+    description: Local tests (127.0.0.1)
+  - url: http://{remote_IP}:8080
+    description: Remote tests
+    variables:
+      remote_IP:
+        default: 192.168.3.215
+security: []
+paths:
+  /charge:
+    get:
+      summary: Read current charge parameters of the charger
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeParameters'
+      tags:
+        - charge
+    put:
+      summary: Set charge parameters of the charger
+      parameters:
+        - name: i_charge_limit
+          in: query
+          description: Maximum allowed intensity when charging
+          schema:
+            $ref: '#/components/schemas/i_charge_limit'
+        - name: i_discharge_limit
+          in: query
+          description: Maximum allowed intensity when discharging
+          schema:
+            $ref: '#/components/schemas/i_discharge_limit'
+        - name: active_power_setpoint
+          in: query
+          description: Maximum active power
+          schema:
+            $ref: '#/components/schemas/active_power_setpoint'
+        - name: reactive_power_setpoint
+          in: query
+          description: Maximum reactive power
+          schema:
+            $ref: '#/components/schemas/reactive_power_setpoint'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeParameters'
+      tags:
+        - charge
+  /state:
+    get:
+      summary: Read target and current states of the charger
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/States'
+      tags:
+        - charge
+    put:
+      summary: Set target state of the charger
+      parameters:
+        - name: target
+          in: query
+          description: Target state
+          schema:
+            $ref: '#/components/schemas/SystemState'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/States'
+      tags:
+        - charge
+  /status:
+    get:
+      summary: Read all statuses of the charger
+      parameters:
+        - name: part
+          description: Name of the part to return, instead of the full result (optional)
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/StatusesPart'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statuses'
+      tags:
+        - status
+  /system:
+    get:
+      summary: Read current configuration of the charger
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+      tags:
+        - config
+    put:
+      summary: Set configuration of the charger
+      parameters:
+        - name: mode
+          in: query
+          description: New operating mode
+          schema:
+            $ref: '#/components/schemas/OperatingMode'
+        - name: grid
+          in: query
+          description: New grid configuration
+          schema:
+            $ref: '#/components/schemas/GridConfig'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configuration'
+      tags:
+        - config
+components:
+  schemas:
+    active_power_setpoint:
+      type: number
+      minimum: 0
+      maximum: 15000
+      example: 11000
+    ChargeParameters:
+      type: object
+      properties:
+        i_charge_limit:
+          $ref: '#/components/schemas/i_charge_limit'
+        i_discharge_limit:
+          $ref: '#/components/schemas/i_discharge_limit'
+        active_power_setpoint:
+          $ref: '#/components/schemas/active_power_setpoint'
+        reactive_power_setpoint:
+          $ref: '#/components/schemas/reactive_power_setpoint'
+    Configuration:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/OperatingMode'
+        grid:
+          $ref: '#/components/schemas/GridConfig'
+    GridConfig:
+      type: string
+      description: Grid Configuration of the charger
+      example: automatic
+      enum:
+        - automatic
+        - P1_W2
+        - P1_W4
+        - P3_W3
+        - P3_W4
+    i_charge_limit:
+      type: number
+      minimum: 0
+      maximum: 50
+      example: 20
+    i_discharge_limit:
+      type: number
+      minimum: 0
+      maximum: 50
+      example: 20
+    OperatingMode:
+      type: string
+      description: Operating Mode of the charger
+      example: disabled
+      enum:
+        - disabled
+        - vsi
+        - pfc_power
+        - pfc_voltage
+    reactive_power_setpoint:
+      type: number
+      minimum: 0
+      maximum: 15000
+      example: 0
+    States:
+      type: object
+      properties:
+        target:
+          $ref: '#/components/schemas/SystemState'
+        current:
+          $ref: '#/components/schemas/SystemState'
+    Statuses:
+      title: Power Unit Statuses Aggregation
+      description: Contains all values from TPDO frames
+      type: object
+      properties:
+        batt:
+          $ref: '#/components/schemas/StatusBatt'
+        grid:
+          $ref: '#/components/schemas/StatusGrid'
+        L1:
+          $ref: '#/components/schemas/StatusL1'
+        L2:
+          $ref: '#/components/schemas/StatusL2'
+        L3:
+          $ref: '#/components/schemas/StatusL3'
+        max:
+          $ref: '#/components/schemas/StatusMax'
+        power:
+          $ref: '#/components/schemas/StatusPower'
+        state:
+          $ref: '#/components/schemas/SystemState'
+    StatusesPart:
+      title: Available Parts of the PU Statuses
+      description: Contains all values from TPDO frames
+      type: string
+      enum:
+        - batt
+        - grid
+        - L1
+        - L2
+        - L3
+        - max
+        - power
+        - state
+    StatusBatt:
+      title: Battery Status
+      description: The “*_batt” variables of `TPDO7`
+      type: object
+      properties:
+        v:
+          type: number
+        i:
+          type: number
+        P:
+          type: number
+    StatusGrid:
+      title: Latest Grid values
+      description: All values from `TPDO6`
+      type: object
+      properties:
+        v:
+          type: number
+        i:
+          type: number
+        P:
+          type: number
+        Q:
+          type: number
+    StatusL1:
+      title: Latest L1 values
+      description: All values from `TPDO3`
+      type: object
+      properties:
+        v:
+          type: number
+        i:
+          type: number
+        P:
+          type: number
+        Q:
+          type: number
+    StatusL2:
+      title: Latest L2 values
+      description: All values from `TPDO4`
+      type: object
+      properties:
+        v:
+          type: number
+        i:
+          type: number
+        P:
+          type: number
+        Q:
+          type: number
+    StatusL3:
+      title: Latest L3 values
+      description: All values from `TPDO5`
+      type: object
+      properties:
+        v:
+          type: number
+        i:
+          type: number
+        P:
+          type: number
+        Q:
+          type: number
+    StatusMax:
+      title: Maximum values
+      description: All values from `TPDO1`
+      type: object
+      properties:
+        v_batt:
+          type: number
+          minimum: 0
+        i_batt:
+          type: number
+          minimum: 0
+        i_grid:
+          type: number
+          minimum: 0
+        P_grid:
+          type: number
+          minimum: 0
+    StatusPower:
+      title: Available Power
+      description: Active & Reactive power from `TPDO2` and V2L power from `TPDO7`
+      type: object
+      properties:
+        pos_active:
+          type: number
+        neg_active:
+          type: number
+        pos_reactive:
+          type: number
+        neg_reactive:
+          type: number
+        V2L:
+          type: number
+    SystemState:
+      type: string
+      description: State of the State Machine of the charger
+      example: standby
+      enum:
+        - init
+        - standby
+        - power_on
+        - charge
+        - safe_d
+        - safe_c
+        - stopping
+        - lock_dsp
+        - fault_ack
+
+#
+# vim: foldmethod=indent

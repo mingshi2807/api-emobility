@@ -1,0 +1,11 @@
+{
+  "description": "Signed contract data storage request.",
+  "content": {
+    "application/json": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  }
+}

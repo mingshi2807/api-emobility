@@ -1,0 +1,930 @@
+openapi: "3.0.3"
+info:
+  title: EV Virtualizer API
+  description: |
+    HTTP REST API and WebSocket API for controlling and monitoring the EV Virtualizer,
+    an electric vehicle (EV) simulator supporting IEC 61851-1, ISO 15118 (DIN 70121,
+    ISO 15118-2, ISO 15118-20), and AC/DC bidirectional charging.
+
+    ## WebSocket API
+
+    In addition to the HTTP REST API, the EV Virtualizer exposes a WebSocket API
+    on a separate port (default **15109**). Messages are JSON with the following structure:
+
+    - **Client → Server**: `{ "method": "POST", "uri": "<path>", "data": { ... }, "id": "<optional-id>" }`
+    - **Server → Client** (broadcast): `{ "method": "POST", "uri": "<path>", "data": { ... }, "code": 200 }`
+
+    ### WebSocket Endpoints
+
+    | Direction | Method | URI | Description |
+    |-----------|--------|-----|-------------|
+    | Client→Server | POST | `/session` | Stop charging (`{ "stop": 1 }`) |
+    | Client→Server | POST | `/plug` | Set plug PP resistor and cable lock (`{ "PP": <int>, "lock": 0\|1 }`) |
+    | Client→Server | POST | `/vehicle` | Send vehicle SoC (`{ "soc": <double> }`) |
+    | Server→Client | POST | `/limits` | Power limit notification (`{ "active_power_limit": <int>, "reactive_power_limit": <int> }`) |
+    | Server→Client | POST | `/services` | Service change notification (`{ "charge-type": "<string>", "generator-mode": "<string>" }`) |
+    | Server→Client | POST | `/service-renegotiation` | Service renegotiation notification (`{ "service-renegotiation": <int> }`) |
+    | Server→Client | raw | `/lock/{lock}\n` | Cable lock command broadcast |
+    | Server→Client | raw | `/charge/{authorized}\n` | Charge authorization broadcast |
+    | Server→Client | raw | `/charge-type/{type}\n` | Charge type notification broadcast |
+
+  contact:
+    name: VEDECOM / TRIALOG
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:15108/api
+    description: Default HTTP API endpoint
+
+security: []
+
+paths:
+  /charge:
+    get:
+      operationId: getChargeStatus
+      summary: Get full charge status overview
+      tags: [Charge]
+      responses:
+        "200":
+          description: Charge status response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeStatus"
+
+  /charge/measured-power:
+    get:
+      operationId: getChargeMeasuredPower
+      summary: Get current measured power
+      tags: [Charge]
+      responses:
+        "200":
+          description: Measured power
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [power, timestamp]
+                properties:
+                  power:
+                    type: number
+                    format: float
+                    description: Measured power in W
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Measurement timestamp (ISO 8601)
+
+  /charge/authentication:
+    post:
+      operationId: setChargeAuthenticationStatus
+      summary: Set authorization state for charging
+      tags: [Charge]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state:
+                  $ref: "#/components/schemas/AuthorizationState"
+      responses:
+        "200":
+          description: Authorization updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeStatus"
+        "400":
+          description: Missing "state" parameter
+        "409":
+          description: Cannot change authorization during a charge
+    put:
+      $ref: "#/paths/~1charge~1authentication/post"
+    patch:
+      $ref: "#/paths/~1charge~1authentication/post"
+    delete:
+      operationId: resetChargeAuthenticationStatus
+      summary: Reset authorization to NOT_AUTHORIZED
+      tags: [Charge]
+      responses:
+        "200":
+          description: Authorization reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeStatus"
+        "409":
+          description: Cannot reset authorization during a charge
+
+  /charge/target:
+    post:
+      operationId: setChargeTarget
+      summary: Set charging target (start/stop charge, set max power)
+      tags: [Charge]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state:
+                  $ref: "#/components/schemas/TargetChargingState"
+                maximumPower:
+                  type: integer
+                  description: Maximum charging power in W
+      responses:
+        "200":
+          description: Target updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeStatus"
+        "400":
+          description: Missing "state" parameter
+    put:
+      $ref: "#/paths/~1charge~1target/post"
+    patch:
+      $ref: "#/paths/~1charge~1target/post"
+    delete:
+      operationId: resetChargeTarget
+      summary: Stop charging (set target to STOPPED, power to 0)
+      tags: [Charge]
+      responses:
+        "200":
+          description: Charge stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChargeStatus"
+
+  /charge/target/planned-profile:
+    get:
+      operationId: getPlannedProfile
+      summary: Get planned charging profile (NOT FULLY IMPLEMENTED)
+      tags: [Charge]
+      responses:
+        "400":
+          description: Not fully implemented (always returns 400)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nbOfPhases:
+                    type: integer
+                    description: Number of phases (1 or 3)
+                  drawer:
+                    type: string
+                    example: external-charge-manager
+    post:
+      operationId: setPlannedProfile
+      summary: Set planned charging profile (schedule)
+      tags: [Charge]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule:
+                  type: array
+                  description: List of schedule periods
+                  items:
+                    type: object
+                    properties:
+                      start:
+                        type: integer
+                        description: Start time in seconds
+                      power:
+                        type: integer
+                        description: Power in W
+                      duration:
+                        type: integer
+                        description: Duration in seconds (optional; if omitted, entry is a point)
+                drawer:
+                  type: string
+                  description: Cannot be "ev-virtualiser"
+      responses:
+        "200":
+          description: Planned profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nbOfPhases:
+                    type: integer
+                  drawer:
+                    type: string
+        "400":
+          description: Missing "schedule" parameter
+        "501":
+          description: drawer cannot be "ev-virtualiser" yet
+    put:
+      $ref: "#/paths/~1charge~1target~1planned-profile/post"
+    patch:
+      $ref: "#/paths/~1charge~1target~1planned-profile/post"
+    delete:
+      operationId: resetPlannedProfile
+      summary: Reset/clear planned charging profile
+      tags: [Charge]
+      responses:
+        "200":
+          description: Planned profile reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nbOfPhases:
+                    type: integer
+                  drawer:
+                    type: string
+
+  /target:
+    get:
+      operationId: getTarget
+      summary: Get charging target settings
+      tags: [Target]
+      responses:
+        "200":
+          description: Target settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetSettings"
+    post:
+      operationId: setTarget
+      summary: Update charging target settings
+      tags: [Target]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                socTarget:
+                  type: integer
+                  description: Target SoC percentage
+                socMax:
+                  type: integer
+                  description: Maximum SoC percentage
+                socMin:
+                  type: integer
+                  description: Minimum SoC percentage
+                duration:
+                  type: integer
+                  description: Target duration in seconds
+      responses:
+        "200":
+          description: Target updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestedEnergyNotFeasible:
+                    type: boolean
+    put:
+      $ref: "#/paths/~1target/post"
+    patch:
+      $ref: "#/paths/~1target/post"
+    delete:
+      operationId: resetTarget
+      summary: Reset target settings (currently no-op)
+      tags: [Target]
+      responses:
+        "200":
+          description: Target reset (no-op)
+
+  /ccs/ev/contract:
+    get:
+      operationId: getContractCert
+      summary: Get contract certificate information
+      tags: [CCS]
+      responses:
+        "200":
+          description: Contract certificate info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eMAID:
+                    type: string
+                    description: Currently selected contract EMAID
+                  Available:
+                    type: array
+                    items:
+                      type: string
+                    description: List of available certificate PEM filenames
+    post:
+      operationId: setContractCert
+      summary: Select/activate a contract certificate
+      tags: [CCS]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eMAID]
+              properties:
+                eMAID:
+                  type: string
+                  description: Contract EMAID to select
+      responses:
+        "200":
+          description: Contract selected
+        "400":
+          description: Missing "eMAID" parameter
+    put:
+      $ref: "#/paths/~1ccs~1ev~1contract/post"
+    patch:
+      $ref: "#/paths/~1ccs~1ev~1contract/post"
+    delete:
+      operationId: resetContractCert
+      summary: Reset/remove a contract certificate
+      tags: [CCS]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eMAID:
+                  type: string
+                  description: Contract EMAID to reset
+      responses:
+        "200":
+          description: Contract reset
+
+  /renegociate:
+    post:
+      operationId: renegociate
+      summary: Request ISO 15118 renegotiation
+      tags: [CCS]
+      responses:
+        "200":
+          description: Renegotiation requested
+    put:
+      $ref: "#/paths/~1renegociate/post"
+    patch:
+      $ref: "#/paths/~1renegociate/post"
+
+  /service_renegotiation:
+    post:
+      operationId: renegociateService
+      summary: Request ISO 15118 service renegotiation
+      tags: [CCS]
+      responses:
+        "200":
+          description: Service renegotiation requested
+    put:
+      $ref: "#/paths/~1service_renegotiation/post"
+    patch:
+      $ref: "#/paths/~1service_renegotiation/post"
+
+  /plug:
+    post:
+      operationId: virtualPlug
+      summary: Simulate plug-in (set CP state to B)
+      tags: [Simulation]
+      responses:
+        "200":
+          description: Plug simulated
+    put:
+      $ref: "#/paths/~1plug/post"
+    patch:
+      $ref: "#/paths/~1plug/post"
+
+  /unplug:
+    post:
+      operationId: virtualUnplug
+      summary: Simulate unplug (set CP state to E)
+      tags: [Simulation]
+      responses:
+        "200":
+          description: Unplug simulated
+    put:
+      $ref: "#/paths/~1unplug/post"
+    patch:
+      $ref: "#/paths/~1unplug/post"
+
+  /monitor/:
+    get:
+      operationId: getSpoonyMeasuredPower
+      summary: Simulate Spoony energy meter readings (ADE7758)
+      tags: [Monitoring]
+      responses:
+        "200":
+          description: Meter readings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  elements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        n:
+                          type: string
+                          description: Element name (prefix "unites/" on alternate endpoint)
+                          example: unites/ade7758/VAA
+                        count:
+                          type: string
+                          example: "1"
+                        records:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              v:
+                                type: number
+                                description: Value
+
+  /monitor/main/monitoring/:
+    get:
+      operationId: getSpoonyMeasuredPowerAlt
+      summary: Alternate URL for Spoony meter simulation (no "unites/" prefix)
+      tags: [Monitoring]
+      responses:
+        "200":
+          description: Meter readings
+          content:
+            application/json:
+              schema:
+                $ref: "#/paths/~1monitor~1/get/responses/200/content/application~1json/schema"
+
+  /ui/{file}:
+    get:
+      operationId: serveStaticFile
+      summary: Serve static UI files (HTML/CSS/JS web frontend)
+      tags: [UI]
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "[a-zA-Z0-9.\\/_-]+"
+          description: File path relative to the serve directory
+      responses:
+        "200":
+          description: File content with appropriate Content-Type
+        "404":
+          description: File not found
+        "500":
+          description: Internal server error
+
+  /config:
+    get:
+      operationId: getConfig
+      summary: Read full application configuration
+      tags: [Config]
+      responses:
+        "200":
+          description: Configuration object
+          content:
+            application/json:
+              schema:
+                type: object
+        "204":
+          description: No config data
+    post:
+      operationId: setConfig
+      summary: Update application configuration at runtime
+      tags: [Config]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Key-value pairs to update
+      responses:
+        "200":
+          description: Config updated
+    put:
+      $ref: "#/paths/~1config/post"
+    patch:
+      $ref: "#/paths/~1config/post"
+
+  /config/{resource}:
+    get:
+      operationId: getConfigResource
+      summary: Read a specific configuration section
+      tags: [Config]
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Configuration section name
+      responses:
+        "200":
+          description: Configuration section
+          content:
+            application/json:
+              schema:
+                type: object
+        "204":
+          description: Resource not found
+    post:
+      operationId: setConfigResource
+      summary: Update a specific configuration section
+      tags: [Config]
+      parameters:
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Configuration section name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Config updated
+    put:
+      $ref: "#/paths/~1config~1{resource}/post"
+    patch:
+      $ref: "#/paths/~1config~1{resource}/post"
+
+  /system:
+    get:
+      operationId: getSystem
+      summary: Get system information and server status
+      tags: [System]
+      responses:
+        "200":
+          description: System information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemInfo"
+    post:
+      operationId: setSystem
+      summary: Set system date/time
+      tags: [System]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date-time
+                  description: New system date/time (ISO 8601)
+      responses:
+        "200":
+          description: Date set successfully
+        "500":
+          description: Failed to set date
+    put:
+      $ref: "#/paths/~1system/post"
+    patch:
+      $ref: "#/paths/~1system/post"
+
+  /system/reboot:
+    post:
+      operationId: rebootDeprecated
+      summary: "[Deprecated] Reboot the system (use /system/hard-reboot)"
+      tags: [System]
+      deprecated: true
+      responses:
+        "200":
+          description: Reboot initiated
+        "500":
+          description: Reboot failed
+    put:
+      $ref: "#/paths/~1system~1reboot/post"
+    patch:
+      $ref: "#/paths/~1system~1reboot/post"
+
+  /system/soft-reboot:
+    post:
+      operationId: softReboot
+      summary: Restart the software application gracefully
+      tags: [System]
+      responses:
+        "200":
+          description: Software restart initiated
+    put:
+      $ref: "#/paths/~1system~1soft-reboot/post"
+    patch:
+      $ref: "#/paths/~1system~1soft-reboot/post"
+
+  /system/hard-reboot:
+    post:
+      operationId: hardReboot
+      summary: Reboot the operating system
+      tags: [System]
+      responses:
+        "200":
+          description: OS reboot initiated
+        "500":
+          description: Reboot failed
+    put:
+      $ref: "#/paths/~1system~1hard-reboot/post"
+    patch:
+      $ref: "#/paths/~1system~1hard-reboot/post"
+
+  /system/soft-shutdown:
+    post:
+      operationId: softShutdown
+      summary: Graceful software shutdown via systemd (systemctl stop)
+      tags: [System]
+      responses:
+        "200":
+          description: Software shutdown initiated
+        "500":
+          description: Shutdown failed
+    put:
+      $ref: "#/paths/~1system~1soft-shutdown/post"
+    patch:
+      $ref: "#/paths/~1system~1soft-shutdown/post"
+
+  /system/hard-shutdown:
+    post:
+      operationId: hardShutdown
+      summary: Shutdown the operating system (shutdown -h now)
+      tags: [System]
+      responses:
+        "200":
+          description: OS shutdown initiated
+        "500":
+          description: Shutdown failed
+    put:
+      $ref: "#/paths/~1system~1hard-shutdown/post"
+    patch:
+      $ref: "#/paths/~1system~1hard-shutdown/post"
+
+  /system/log/{log-name}/{log-extension}:
+    get:
+      operationId: downloadLogFile
+      summary: Download a log file
+      tags: [System]
+      parameters:
+        - name: log-name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: ["0", "previous", "system", "auth"]
+          description: |
+            Log file identifier:
+            - `0` or numeric: numbered log file
+            - `previous`: previous log file
+            - `system`: system daemon log (/var/log/daemon.log)
+            - `auth`: authentication log
+        - name: log-extension
+          in: path
+          required: true
+          schema:
+            type: string
+            default: "log"
+            enum: [log, csv]
+          description: Log file extension
+      responses:
+        "200":
+          description: Log file content
+          content:
+            text/plain:
+              schema:
+                type: string
+            text/csv:
+              schema:
+                type: string
+        "204":
+          description: No log file found
+        "400":
+          description: Unknown log file
+        "500":
+          description: Cannot read log file
+    delete:
+      operationId: purgeLogFile
+      summary: Purge/delete a log file
+      tags: [System]
+      parameters:
+        - name: log-name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: ["0", "previous", "system", "auth"]
+          description: Log file identifier
+        - name: log-extension
+          in: path
+          required: true
+          schema:
+            type: string
+            default: "log"
+            enum: [log, csv]
+          description: Log file extension
+      responses:
+        "200":
+          description: Log file purged
+        "204":
+          description: No log file to purge
+        "400":
+          description: Unknown log file
+
+components:
+  schemas:
+    AuthorizationState:
+      type: string
+      description: Authorization state
+      enum: [NOT_AUTHORIZED, AUTHORIZED]
+
+    TargetChargingState:
+      type: string
+      description: Target charging state
+      enum: [STOPPED, CHARGING, DISCHARGING]
+
+    ChargingState:
+      type: string
+      description: Current charging state
+      enum:
+        - UNPLUGGED
+        - PLUGGED
+        - STANDBY
+        - CHARGING
+        - DISCHARGING
+        - FINISHED
+        - ERROR
+
+    ControlPilotState:
+      type: string
+      description: Control Pilot state (IEC 61851)
+      enum:
+        - STATE_A
+        - STATE_B
+        - STATE_C
+        - STATE_D
+        - STATE_E
+        - STATE_F
+
+    ChargeStatus:
+      type: object
+      required:
+        - state
+        - authentication
+        - soc
+        - chargeIMax
+        - chargeIMin
+        - energyMaxBattery
+        - pwm
+        - cp
+        - pp
+      properties:
+        state:
+          $ref: "#/components/schemas/ChargingState"
+        authentication:
+          type: object
+          properties:
+            state:
+              $ref: "#/components/schemas/AuthorizationState"
+        soc:
+          type: number
+          format: float
+          description: State of charge (0.0 – 1.0)
+        chargeIMax:
+          type: number
+          format: float
+          description: Maximum charge current in A
+        chargeIMin:
+          type: number
+          format: float
+          description: Minimum charge current in A
+        energyMaxBattery:
+          type: number
+          format: float
+          description: Battery capacity in Wh
+        pwm:
+          type: integer
+          description: PWM duty cycle value
+        cp:
+          $ref: "#/components/schemas/ControlPilotState"
+        pp:
+          type: integer
+          description: Cable capacity (Proximity Pilot resistor value)
+        arrivalDate:
+          type: string
+          format: date-time
+          description: Arrival date (ISO 8601, present when charging)
+        measuredPowerDetails:
+          type: object
+          properties:
+            power:
+              type: number
+              format: float
+              description: Measured power in W
+            timestamp:
+              type: string
+              format: date-time
+              description: Measurement timestamp
+        measuredPower:
+          type: number
+          format: float
+          description: Measured power in W (shorthand)
+        chargedEnergy:
+          type: number
+          format: float
+          description: Energy charged in Wh
+        dischargedEnergy:
+          type: number
+          format: float
+          description: Energy discharged in Wh
+        target:
+          type: object
+          properties:
+            state:
+              $ref: "#/components/schemas/TargetChargingState"
+            maximumPower:
+              type: integer
+              description: Maximum power in W
+            appliedPower:
+              type: integer
+              description: Applied power in W
+            nbOfPhases:
+              type: integer
+              description: Number of phases (1 or 3)
+            departureDate:
+              type: string
+              description: Planned departure date/time
+            requestedEnergy:
+              type: number
+              description: Requested energy
+
+    TargetSettings:
+      type: object
+      properties:
+        immediateChargeRequested:
+          type: boolean
+          description: Whether immediate charge is requested
+        socTarget:
+          type: integer
+          description: Target SoC percentage
+        socMax:
+          type: integer
+          description: Maximum SoC percentage
+        socMin:
+          type: integer
+          description: Minimum SoC percentage
+        duration:
+          type: integer
+          description: Target duration in seconds
+        departureDate:
+          type: string
+          format: date-time
+          description: Planned departure date (yyyy-MM-ddTHH:mm:ssZ)
+        requestedEnergy:
+          type: number
+          format: float
+          description: Energy required to reach target SoC in Wh
+
+    SystemInfo:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Current system date/time (ISO 8601)
+        name:
+          type: string
+          description: Application name
+        version:
+          type: string
+          description: Application version
+        builddate:
+          type: string
+          description: Build date
+        behaviour:
+          type: string
+          description: Application behaviour mode
+        httpPort:
+          type: integer
+          description: HTTP API port
+        wsPort:
+          type: integer
+          description: WebSocket API port
+        prefix:
+          type: string
+          description: API URL prefix

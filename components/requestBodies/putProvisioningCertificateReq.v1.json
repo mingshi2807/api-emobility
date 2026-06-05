@@ -1,0 +1,11 @@
+{
+  "description": "Provisioning certificate storage request.",
+  "content": {
+    "application/json": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  }
+}

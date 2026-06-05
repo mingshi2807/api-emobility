@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "required": [
+    "certificate",
+    "revocationReason"
+  ],
+  "properties": {
+    "certificate": {
+      "type": "string",
+      "description": "Base64 encoded certificate to revoke."
+    },
+    "revocationReason": {
+      "type": "string",
+      "description": "Reason for revocation."
+    }
+  },
+  "additionalProperties": false
+}

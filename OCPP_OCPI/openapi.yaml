@@ -1,0 +1,2771 @@
+openapi: 3.1.0
+info:
+  title: CSMS REST API
+  description: |
+    REST API for Charging Station Management System (CSMS) supporting OCPP 2.0.1/2.1 operations, 
+    CSMS administration, and OCPI 2.2.1 functionality.
+    
+    **Authentication**: Most endpoints require a JWT token obtained from the login endpoint.
+    OCPI endpoints use OCPI token-based authentication.
+  version: 0.0.1
+  contact:
+    name: VEDECOM CSMS API
+  license:
+    name: MIT
+    url: "https://spdx.org/licenses/MIT.html"
+    identifier: "MIT"
+    
+servers:
+  - url: https://csms.emobility-vedecom.org:8080
+    description: CSMS Web Server (TLS)
+  - url: http://csms.emobility-vedecom.org:8080
+    description: CSMS Web Server (no TLS)
+
+security:
+  - BearerAuth: []
+  - OCPIToken: []
+  - {}
+
+paths:
+  # Authentication
+  /login:
+    post:
+      operationId: loginUser
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive JWT token (expires after 2 hours)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: "XYZ_user"
+              password: "azerty"
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Unauthorized - Invalid credentials
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                missing_required_data:
+                  summary: Missing required fields
+                  value: "Missing data in JSON payload ('username' and 'password' required)"
+                invalid_data_type_username:
+                  summary: Invalid username type
+                  value: "'username' must be a string"
+                invalid_data_type_password:
+                  summary: Invalid password type
+                  value: "'password' must be a string"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # OCPP Actions
+  /ocpp/{station_id}/set_variables:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Set Variables
+      operationId: setVariables
+      description: Change one or several configuration variables of the charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/SetVariablesRequest'
+            example:
+              - component:
+                  name: "OCPPCommCtrlr"
+                variable:
+                  name: "HeartbeatInterval"
+                attribute_value: "45"
+      responses:
+        '200':
+          description: Charging Station response for SetVariablesRequest
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SetVariablesResponse'
+              example:
+                - component:
+                    name: "OCPPCommCtrlr"
+                  variable:
+                    name: "HeartbeatInterval"
+                  attribute_status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/get_variables:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Get Variables
+      operationId: getVariables
+      description: Retrieve one or several configuration variables of the charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/GetVariablesRequest'
+            example:
+              - component:
+                  name: "SecurityCtrlr"
+                variable:
+                  name: "SecurityProfile"
+      responses:
+        '200':
+          description: Charging Station response for GetVariablesRequest
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetVariablesResponse'
+              example:
+                - component:
+                    name: "SecurityCtrlr"
+                  variable:
+                    name: "SecurityProfile"
+                  attribute_status: "Accepted"
+                  attribute_value: "3"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/trigger_message:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Trigger Message
+      operationId: triggerMessage
+      description: Force the charging station to perform a specific OCPP function
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerMessageRequest'
+            example:
+              requested_message: "SignV2GCertificate"
+      responses:
+        '200':
+          description: Charging Station response for TriggerMessageRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerMessageResponse'
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/request_start_transaction:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Remote Start Transaction
+      operationId: requestStartTransaction
+      description: Request a charging station to start a transaction
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestStartTransactionRequest'
+            example:
+              id_token:
+                id_token: "0000-0000-0001"
+                type: "Central"
+              remote_start_id: 12345
+      responses:
+        '200':
+          description: Charging Station response for RequestStartTransactionRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestStartTransactionResponse'
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/request_stop_transaction:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Remote Stop Transaction
+      operationId: requestStopTransaction
+      description: Request a charging station to stop a transaction
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestStopTransactionRequest'
+            example:
+              transaction_id: "azerty-1234-poiuyt-9876"
+      responses:
+        '200':
+          description: Charging Station response for RequestStartTransactionRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestStopTransactionResponse'
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/get_base_report/{report_type}:
+    get:
+      tags:
+        - OCPP Actions
+      summary: Get Base Report
+      operationId: getBaseReport
+      description: Request a charging station to send a predefined report
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+        - name: report_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [FullInventory, ConfigurationInventory, SummaryInventory]
+          description: Type of report to request
+      responses:
+        '200':
+          description: Charging Station response for GetBaseReportRequest. If accepted, the report will be send in an subsequent Action called NotifyReport
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    description: This indicates whether the Charging Station is able to accept this request
+                    type: string
+                    enum: [Accepted, Rejected, NotSupported, EmptyResultSet]
+                  status_info:
+                    $ref: '#/components/schemas/StatusInfoType' 
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/reset:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Reset
+      operationId: reset
+      description: Request a charging station to reset itself
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+            example:
+              type: "OnIdle"
+              evse: 1
+      responses:
+        '200':
+          description: Charging Station response for ResetRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetResponse'
+              example:
+                status: "Scheduled"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/data_transfer:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Data Transfer
+      operationId: dataTransfer
+      description: Request a charging station to perform a custom action. VEDECOM CSMS supports an `add_config` custom function to add a new Component and Variable to the Device Model
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTransferRequest'
+            example:
+              vendor_id: "XYZ"
+              message_id: "add_config"
+              data:
+                component:
+                  name: "CustomCtrlr"
+                variable:
+                  name: "CustomVariable"
+                value: "Hello OCPP !"
+                read_only: "false"
+      responses:
+        '200':
+          description: Charging Station response for DataTransferRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataTransferResponse'
+              example:
+                status: "Accepted"
+                data:
+                  component:
+                    name: "CustomCtrlr"
+                  variable:
+                    name: "CustomVariable"
+                  value: "Hello OCPP !"
+                  read_only: "false"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/get_transaction_status:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Get Transaction Status
+      operationId: getTransactionStatus
+      description: Ask the charging station about transaction-related messages waiting to be delivered
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetTransactionStatusRequest'
+            example:
+              transaction_id: "GoejPkeo_4965"
+      responses:
+        '200':
+          description: Charging Station response for GetTransactionStatusRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTransactionStatusResponse'
+              example:
+                messages_in_queue: false
+                ongoing_indicator: true
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/install_ca_certificate:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Install Root CA Certificate
+      operationId: installCACertificate
+      description: Request charging station to install a new Root CA certificate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallCertificateRequest'
+            example:
+              certificate_type: "V2GRootCertificate"
+              certificate: "-----BEGIN CERTIFICATE-----\nMIICSjCCAdGgAwIBAgIUSAaZVMn5Vsv...[truncated for brevity]\n-----END CERTIFICATE-----"
+      responses:
+        '200':
+          description: Charging Station response for InstallCertificateRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallCertificateResponse'
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/get_charging_profiles:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Get Charging Profiles
+      operationId: getChargingProfiles
+      description: Search for installed charging profiles in a charging station. The charging profiles will then be reported by the Charging Station via ReportChargingProfilesRequest messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetChargingProfilesRequest'
+            examples:
+              by_id:
+                summary: Search by charging profile ID
+                value:
+                  request_id: 12345
+                  charging_profile:
+                    charging_profile_id: [255]
+              by_criteria:
+                summary: Search by stack level and purpose
+                value:
+                  request_id: 67890
+                  charging_profile:
+                    charging_profile_purpose: "TxDefaultProfile"
+                    stack_level: 1
+      responses:
+        '200':
+          description: Charging Station response for GetChargingProfilesRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetChargingProfilesResponse'
+              example:
+                status: "NoProfiles"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/set_charging_profile:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Set Charging Profile
+      operationId: setChargingProfile
+      description: Provide charging station with a new charging profile
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetChargingProfileRequest'
+            examples:
+              tx_default_profile:
+                summary: TxDefaultProfile example
+                value:
+                  evse_id: 1
+                  charging_profile:
+                    id: 1
+                    stack_level: 1
+                    charging_profile_purpose: "TxDefaultProfile"
+                    charging_profile_kind: "Relative"
+                    charging_schedule:
+                      - id: 1
+                        charging_rate_unit: "W"
+                        charging_schedule_period:
+                          - start_period: 0
+                            limit: 2000
+                          - start_period: 3600
+                            limit: 5000
+              max_profile:
+                summary: ChargingStationMaxProfile
+                value:
+                  evse_id: 0
+                  charging_profile:
+                    id: 2
+                    stack_level: 1
+                    charging_profile_purpose: "ChargingStationMaxProfile"
+                    charging_profile_kind: "Absolute"
+                    charging_schedule:
+                      - id: 301
+                        start_schedule: "2025-07-14T12:00:00Z"
+                        charging_rate_unit: "W"
+                        charging_schedule_period:
+                          - start_period: 0
+                            limit: 22000
+      responses:
+        '200':
+          description: Charging Station response for SetChargingProfileRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetChargingProfileResponse'
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/change_availability:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Change Availability
+      operationId: setAvailability
+      description: Change the availability of EVSE, Connector or entire charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeAvailabilityRequest'
+            examples:
+              entire_station:
+                summary: Change availability of entire station
+                value:
+                  operational_status: "Operative"
+              specific_evse:
+                summary: Change availability of specific EVSE and connector
+                value:
+                  operational_status: "Inoperative"
+                  evse:
+                    id: 1
+                    connector_id: 3
+      responses:
+        '200':
+          description: Charging Station response for ChangeAvailabilityRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeAvailabilityResponse'
+              example:
+                status: "Accepted"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ChargingStationNotConnectedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/send_local_list:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Send Local List
+      operationId: sendLocalList
+      description: Send Local Authorization List to the charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendLocalListRequest'
+            example:
+              version_number: 12
+              update_type: "Full"
+              local_authorization_list:
+                - id_token_info:
+                    status: "Accepted"
+                  id_token:
+                    id_token: "ABC1234"
+                    type: "ISO14443"
+                - id_token_info:
+                    status: "Accepted"
+                  id_token:
+                    id_token: "DEF4567"
+                    type: "ISO14443"
+      responses:
+        '200':
+          description: Charging Station response for SendLocalListRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendLocalListResponse'
+              example:
+                status: "VersionMismatch"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                ocpp_protocol_error:
+                  summary: Validation error of OCPP payload (wrong type, missing property etc.)
+                  value: "ProtocolError: <OCPP Error description>"
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/get_restricted_status:
+    get:
+      tags:
+        - OCPP Actions
+      summary: Get Restricted Status
+      operationId: getRestrictedStatus
+      description: Retrieve the restricted_status variable of a charging station. Is used to activate 'Pending' mode during BootNotification
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      responses:
+        '200':
+          description: Restricted status of the charging station or None if not found
+          content:
+            text/plain:
+              schema:
+                anyOf:
+                  - type: boolean
+                  - type: string
+              examples:
+                success: 
+                  summary: restricted_status value successfully retrieved
+                  value: "true"
+                not_found: 
+                  summary: restricted_status value not retrieved
+                  value: "None"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/set_restricted_status:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Set Restricted Status
+      operationId: setRestrictedStatus
+      description: Change the restricted_status variable of a charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetRestrictedStatusRequest'
+            example:
+              new_status: false
+      responses:
+        '200':
+          description: Operation result (true of false)
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: "Charging station ICOFI_CS201 restricted status is now false"
+                failure:
+                  value: "Could not update restricted status of ICOFI_CS201"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+                missing_new_status:
+                  summary: New status not provided
+                  value: "No status provided to update the restricted status of the charging station"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/get_blacklisted_status:
+    get:
+      tags:
+        - OCPP Actions
+      summary: Get Blacklisted Status
+      operationId: getBlacklistedStatus
+      description: Retrieve the blacklisted variable of a charging station. is used to activate 'Rejected' mode during BootNotification
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      responses:
+        '200':
+          description: Blacklisted status of the charging station or None if not found
+          content:
+            text/plain:
+              schema:
+                anyOf:
+                  - type: boolean
+                  - type: string
+              examples:
+                success: 
+                  summary: blacklisted_status value successfully retrieved
+                  value: "true"
+                not_found: 
+                  summary: blacklisted_status value not retrieved
+                  value: "None"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/set_blacklisted_status:
+    post:
+      tags:
+        - OCPP Actions
+      summary: Set Blacklisted Status
+      operationId: setBlacklistedStatus
+      description: Change the blacklisted_status variable of a charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetBlacklistedStatusRequest'
+            example:
+              new_status: false
+      responses:
+        '200':
+          description: Operation result (true of false)
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: "Charging station ICOFI_CS201 blacklisted status is now false"
+                failure:
+                  value: "Could not update blacklisted status of ICOFI_CS201"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+                missing_new_status:
+                  summary: New status not provided
+                  value: "No status provided to update the blacklisted status of the charging station"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpp/{station_id}/disconnect:
+    get:
+      tags:
+        - OCPP Actions
+      summary: Disconnect Charging Station
+      operationId: disconnectCS
+      description: Disconnect the specified charging station
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/StationId'
+      responses:
+        '200':
+          description: Charging station disconnected successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Charging station ICOFI_CS201 disconnected"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Error when disconnecting the charging station
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Failed to disconnect charging station: ICOFI_CS201"
+
+  # CSMS Administration
+  /admin/add_charge_point:
+    post:
+      tags:
+        - CSMS Administration
+      summary: Add Charging Station
+      operationId: addCS
+      description: Add a charging station to the CSMS database
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddChargePointRequest'
+            example:
+              cp_id: "CP_3"
+              ocpp_version: "2.0.1"
+              basic_auth_password: "p@ssw0rd"
+      responses:
+        '201':
+          description: Charging station successfully added
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Charging station ICOFI_CS201 successfully added"
+        '409':
+          description: Duplicate charging station identity
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Charging station ICOFI_CS201 already exists, please provide another id for the new charging station"
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                empty_payload:
+                  summary: Empty request body
+                  value: "Request body cannot be empty"
+                invalid_type:
+                  summary: Invalid request body
+                  value: "Invalid type (awaited JSON)"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/delete_charge_point/{cp_id}:
+    delete:
+      tags:
+        - CSMS Administration
+      summary: Delete Charging Station
+      operationId: deleteCS
+      description: Delete a charging station from the CSMS database
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cp_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Charging station ID to delete
+          example: "ICOFI_CS201"
+      responses:
+        '202':
+          description: Charging station deleted successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Charging station ICOFI_CS201 successfully deleted."
+        '404':
+          description: Charging station not found
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Charging station ICOFI_CS201 does not exist in database"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/add_user:
+    post:
+      tags:
+        - CSMS Administration
+      summary: Add user
+      operationId: addUser
+      description: Add a user (CPO, admin or EV user) to the CSMS users database
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCPORequest'
+            example:
+              username: "Mick"
+              password: "$H4m0n4_"
+              role: "CPO"
+      responses:
+        '201':
+          description: User successfully added
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "New user 'Mick' successfully added"
+        '409':
+          description: Duplicate user
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "User 'Mick' already exists, please provide another username"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/delete_user/{username}:
+    delete:
+      tags:
+        - CSMS Administration
+      summary: Delete user
+      operationId: deleteUser
+      description: Delete a user from the CSMS user database
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: User username to delete
+          example: "Mick"
+      responses:
+        '202':
+          description: User deleted successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "User 'Mick' deleted"
+        '404':
+          description: User not found
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "User 'Mick' not found"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/get_logs:
+    get:
+      tags:
+        - CSMS Administration
+      summary: Get Logs
+      operationId: getLogs
+      description: Retrieve all logs of the CSMS from its last start
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: string
+              example: "15-07-2025 15:50:00(CEST) INFO     server listening on 0.0.0.0:9000"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # OCPI Actions
+  /ocpi/admin/credentials/register/as_sender:
+    post:
+      tags:
+        - OCPI Actions
+      summary: Registration process as Sender
+      operationId: registerAsSender
+      description: Start registration process of this OCPI platform as Sender on a third-party Receiver OCPI platform
+      security:
+        - OCPIToken: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterAsSenderRequest'
+            example:
+              token: "temporary_token_a"
+              versions_endpoints: "https://third-party.org/ocpi/versions"
+      responses:
+        '200':
+          description: Registration succeeded
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: "Registration as Sender on third-party OCPI platform complete"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                missing_payload:
+                  summary: No body provided
+                  value: "Missing JSON payload"
+                missing_data:
+                  summary: Missing token or Versions endpoint
+                  value: "Missing data in JSON payload ('token' and 'versions_endpoint' required)"
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpi/admin/credentials/register/as_receiver:
+    get:
+      tags:
+        - OCPI Actions
+      summary: Registration process as Receiver
+      operationId: registerAsReceiver
+      description: Start registration process of this OCPI platform as Receiver on a third-party Sender OCPI platform
+      security:
+        - OCPIToken: [admin]
+      responses:
+        '200':
+          description: Generated OCPI Credentials to be sent to the Sender (by email or other mean)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OCPICredentials'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          description: Internal Error
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Could not generate Credentials for Sender OCPI platform
+
+  /ocpi/2.2.1/credentials:
+    get:
+      tags:
+        - OCPI Actions
+      summary: Get Credentials
+      operationId: getCredentials
+      description: Retrieve Credentials using OCPI Credentials token from authorization header
+      security:
+        - OCPIToken: []
+      responses:
+        '200':
+          description: Credentials retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timestamp
+                  - data
+                  - status_code
+                properties:
+                  data:
+                      $ref: '#/components/schemas/OCPICredentials'
+                  status_code:
+                    type: integer
+                    example: 1000
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - OCPI Actions
+      summary: Send Credentials
+      operationId: postCredentials
+      description: POST interface for the Sender to provide this OCPI platform (acting as Receiver) with Credentials (registration process). It will return a Credentials for the Sender to access this OCPI platform.
+      security:
+        - OCPIToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OCPICredentials'
+      responses:
+        '200':
+          description: Credentials sent by the Sender stored and initial Credentials for the Sender updated and returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timestamp
+                  - data
+                  - status_code
+                properties:
+                  data:
+                      $ref: '#/components/schemas/OCPICredentials'
+                  status_code:
+                    type: integer
+                    example: 1000
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                missing_payload:
+                  summary: No body provided
+                  value: "Missing JSON payload"
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpi/versions:
+    get:
+      tags:
+        - OCPI Actions
+      summary: Get OCPI Versions
+      operationId: getVersions
+      description: Retrieve list of supported OCPI versions
+      security:
+        - OCPIToken: []
+      responses:
+        '200':
+          description: OCPI versions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timestamp
+                  - data
+                  - status_code
+                properties:
+                  data:
+                    type: array
+                    minItems: 1
+                    items:
+                      $ref: '#/components/schemas/OCPIVersion'
+                  status_code:
+                    type: integer
+                    example: 1000
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpi/2.2.1/details:
+    get:
+      tags:
+        - OCPI Actions
+      summary: Get Version Details
+      operationId: getVersionDetails
+      description: Fetch information about the supported endpoints for this OCPI 2.2.1 platform
+      security:
+        - OCPIToken: []
+      responses:
+        '200':
+          description: Version details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timestamp
+                  - data
+                  - status_code
+                properties:
+                  data:
+                    type: array
+                    minItems: 1
+                    items:
+                      $ref: '#/components/schemas/OCPIVersionDetails'
+                  status_code:
+                    type: integer
+                    example: 1000
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+                
+  /ocpi/2.2.1/sessions:
+    get:
+      tags:
+        - OCPI Actions
+      summary: Get OCPI Sessions
+      operationId: getSessions
+      description: Retrieve Sessions from the CPO system
+      security:
+        - OCPIToken: []
+      parameters:
+        - in: query
+          name: date_from
+          schema:
+            type: string
+            format: date-time
+          required: true
+          description: Only return Sessions that have last_updated after or equal to this Date/Time (inclusive).
+        - in: query
+          name: date_to
+          schema:
+            type: string
+            format: date-time
+          required: false
+          description: Only return Sessions that have last_updated up to this Date/Time, but not including (exclusive).
+      responses:
+        '200':
+          description: Session object retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timestamp
+                  - status_code
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OCPISession'
+                  status_code:
+                    type: integer
+                    example: 1000
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ocpi/2.2.1/chargingprofiles:
+    put:
+      tags:
+        - OCPI Actions
+      summary: Send ChargingProfile
+      operationId: putChargingProfile
+      description: Creates a new ChargingProfile on a session, or replaces an existing ChargingProfile on the EVSE.
+      security:
+        - OCPIToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OCPISetChargingProfile'
+      responses:
+        '200':
+          description: Result of the ChargingProfile PUT request, by the CPO (not the location/EVSE). So this indicates if the CPO understood the ChargingProfile PUT request and was able to send it to the EVSE. This is not the response by the Charge Point.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - timestamp
+                  - status_code
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OCPIChargingProfileResponse'
+                  status_code:
+                    type: integer
+                    example: 1000
+                  timestamp:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from [/login](#operation/loginUser) endpoint
+      
+    OCPIToken:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: OCPI Credentials token in format "Token <base64_encoded_token>"
+
+  parameters:
+    StationId:
+      name: station_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Charging station identifier
+      example: "ICOFI_CS201"
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized
+
+    ChargingStationNotConnectedError:
+      description: Charging station not connected
+
+    InternalError:
+      description: Internal server error
+
+    NotFoundError:
+      description: Resource does not exist
+
+  schemas:
+    EVSEType:
+      description: OCPP Electric Vehicle Supply Equipment representation 
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        connector_id:
+          type: integer
+          minimum: 0
+
+    ComponentType:
+      description: OCPP Device Model Component
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        instance:
+          type: string
+        evse:
+          $ref: '#/components/schemas/EVSEType'
+
+    VariableType:
+      description: OCPP Device Model Variable
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        instance:
+          type: string
+
+    AttributeEnumType:
+      description: Attribute type for which value is requested. When absent, default Actual is assumed
+      type: string
+      enum: [Actual, Target, MaxSet, MinSet]
+
+    StatusInfoType:
+      description: Element providing more information about the status
+      type: object
+      required:
+        - reason_code
+      properties:
+        reason_code:
+          type: string
+        additional_info:
+          type: string
+
+    RequestStartStopStatusEnumType:
+      description: The result of a RequestStartTransactionRequest or RequestStopTransactionRequest
+      type: string
+      enum: [Accepted, Rejected]
+
+    AuthorizationStatusEnumType:
+      type: string
+      enum: [Accepted, Blocked, ConcurrentTx, Expired, Invalid, NoCredit, NotAllowedTypeEVSE, NotAtThisLocation, NotAtThisTime, Unknown]
+
+    IdTokenInfoType:
+      description: Contains status information about an identifier. It is advised to not stop charging for a token that expires during charging, as ExpiryDate is only used for caching purposes. If ExpiryDate is not given, the status has no end date
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Current status of the ID Token
+          $ref: '#/components/schemas/AuthorizationStatusEnumType'
+        cache_expiry_date_time:
+          description: Date and Time after which the token must be considered invalid
+          type: string
+          format: date-time
+        charging_priority:
+          description: Priority from a business point of view. Default priority is 0, The range is from -9 to 9. Higher values indicate a higher priority. The chargingPriority in TransactionEventResponse overrules this one
+          type: integer
+        language_1:
+          description: Preferred user interface language of identifier user. Contains a language code as defined in RFC5646
+          type: string
+        language_2:
+          description: Second preferred user interface language of identifier user. Don’t use when language1 is omitted, has to be different from language1. Contains a language code as defined in RFC5646
+          type: string
+        evse_id:
+          description: Only used when the IdToken is only valid for one or more specific EVSEs, not for the entire Charging Station
+          type: array
+          items:
+            type: integer
+        group_id_token:
+          description: Group identifier
+          $ref: '#/components/schemas/IdTokenType'
+        personal_message:
+          description: Personal message that can be shown to the EV Driver and can be used for tariff information, user greetings etc.
+          type: object
+          required:
+            - format
+          properties:
+            format:
+              description: Format of the message
+              type: string
+              enum: [ASCII, HTML, URI, UTF8]
+            language:
+              description: Message language identifier. Contains a language code as defined in RFC5646
+              type: string
+            content:
+              description: Message content
+              type: string
+
+    AdditionalInfoType:
+      description: AdditionalInfo can be used to send extra information which can be validated by the CSMS in addition to the regular authorization with IdToken
+      type: object
+      required:
+        - additional_id_token
+        - type
+      properties:
+        additional_id_token:
+          description: This field specifies the additional IdToken
+          type: string
+        type:
+          description: This defines the type of the additionalIdToken. This is a custom type, so the implementation needs to be agreed upon by all involved parties
+          type: string
+
+    IdTokenType:
+      description: Identifier to use for the authorization and the type of authorization to support multiple forms of identifiers
+      type: object
+      required:
+        - id_token
+        - type
+      properties:
+        id_token:
+          description: IdToken is case insensitive. Might hold the hidden id of an RFID tag, but can for example also contain a UUID
+          type: string
+        type:
+          description: Enumeration of possible idToken types
+          type: string
+          enum: [Central, eMAID, ISO14443, ISO15693, KeyCode, Local, MacAddress, NoAuthorization]
+        additional_info:
+          $ref: '#/components/schemas/AdditionalInfoType'
+
+    ChargingProfileType:
+      description: A ChargingProfile consists of ChargingSchedule, describing the amount of power or current that can be delivered per time interval
+      type: object
+      required:
+        - id
+        - stack_level
+        - charging_profile_purpose
+        - charging_profile_kind
+        - charging_schedule
+      properties:
+        id:
+          description: Id of ChargingProfile
+          type: integer
+        stack_level:
+          description: Value determining level in hierarchy stack of profiles. Higher values have precedence over lower values. Lowest level is 0
+          type: integer
+        charging_profile_purpose:
+          $ref: '#/components/schemas/ChargingProfilePurposeEnumType'
+        charging_profile_kind:
+          $ref: '#/components/schemas/ChargingProfileKindEnumType'
+        recurrency_kind:
+          $ref: '#/components/schemas/RecurrencyKindEnumType'
+        valid_from:
+          description: Point in time at which the profile starts to be valid. If absent, the profile is valid as soon as it is received by the Charging Station
+          type: string
+          format: date-time
+        valid_to:
+          description: Point in time at which the profile stops to be valid. If absent, the profile is valid until it is replaced by another profile
+          type: string
+          format: date-time
+        transaction_id:
+          description: SHALL only be included when ChargingProfilePurpose is set to TxProfile in a SetChargingProfileRequest. The transactionId is used to match the profile to a specific transaction.
+          type: string
+        charging_schedule:
+          description: Schedule that contains limits for the available power or current over time. In order to support ISO 15118 schedule negotiation, it supports at most three schedules with associated tariff to choose from. Having multiple chargingSchedules is only allowed for charging profiles of purpose TxProfile in the context of an ISO 15118 charging session
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/ChargingScheduleType'
+
+    ChargingScheduleType:
+      description: Charging schedule structure defines a list of charging periods
+      type: object
+      required:
+        - id
+        - charging_rate_unit
+        - charging_schedule_period
+      properties:
+        id:
+          description: Identifies the charging schedule
+          type: integer
+        start_schedule:
+          description: Starting point of an absolute or recurring schedule
+          type: string
+          format: date-time
+        duration:
+          description: Duration of the charging schedule in seconds. If the duration is left empty, the last period will continue indefinitely or until end of the transaction if chargingProfilePurpose = TxProfile
+          type: integer
+        charging_rate_unit:
+          $ref: '#/components/schemas/ChargingRateUnitEnumType'
+        min_charging_rate:
+          description: Minimum charging rate supported by the EV
+          type: number
+        charging_schedule_period:
+          description: List of ChargingSchedulePeriod elements defining maximum power or current usage over time
+          type: array
+          minItems: 1
+          maxItems: 1024
+          items:
+            $ref: '#/components/schemas/ChargingSchedulePeriodType'
+        sales_tariff:
+          description: Sales tariff associated with this charging schedule
+          $ref: '#/components/schemas/SalesTariffType'
+        
+    SalesTariffType:
+      description: This dataType is based on dataTypes from ISO 15118-2
+      type: object
+      required:
+        - id
+        - sales_tariff_entry
+      properties:
+        id:
+          description: SalesTariff identifier used to identify one sales tariff. An SAID remains a unique identifier for one schedule throughout a charging session
+          type: integer
+        sales_tariff_description:
+          description: A human readable title/short description of the sales tariff e.g. for HMI display purposes
+          type: string
+        num_e_price_levels:
+          description: Defines the overall number of distinct price levels used across all provided SalesTariff elements
+          type: integer
+        sales_tariff_entry:
+          description: Encapsulating element describing all relevant details for one time interval of the SalesTariff. The number of SalesTariffEntry elements is limited by the parameter maxScheduleTuples
+          type: array
+          minItems: 1
+          maxItems: 1024
+          items:
+            $ref: '#/components/schemas/SalesTariffEntryType'
+
+    SalesTariffEntryType:
+      type: object
+      required:
+        - relative_time_interval
+      properties:
+        e_price_level:
+          description: Defines the price level of this SalesTariffEntry
+          type: integer
+        relative_time_interval:
+          description: Defines the time interval the SalesTariffEntry is valid for, based upon relative times
+          type: object
+          required:
+            - start
+          properties:
+            start:
+              description: Start of the interval, in seconds from NOW
+              type: integer
+            duration:
+              description: Duration of the interval, in seconds
+              type: integer
+            consumption_cost:
+              description: Defines additional means for further relative price information and/or alternative costs
+              type: array
+              maxItems: 3
+              items:
+                $ref: '#/components/schemas/ConsumptionCostType'
+
+    ConsumptionCostType:
+      type: object
+      required:
+        - start_value
+        - cost
+      properties:
+        start_value:
+          description: The lowest level of consumption that defines the starting point of this consumption block. The block interval extends to the start of the next interval
+          type: number
+        cost:
+          $ref: '#/components/schemas/CostType'
+
+    CostType:
+      description: Cost details
+      type: object
+      required: 
+        - cost_kind
+        - amount
+      properties:
+        cost_kind:
+          description: The kind of cost referred to in the message element amount
+          type: string
+          enum: [CarbonDioxideEmisssion, RelativePricePercentage, RenewableGenerationPercentage]
+        amount: 
+          description: The estimated or actual cost per kWh
+          type: integer
+        amount_multiplier:
+          description: Values -3..3, The amountMultiplier defines the exponent to base 10 (dec). The final value is determined by amount * 10 ^ amountMultiplier
+          type: integer
+          minimum: -3
+          maximum: 3
+
+    ChargingSchedulePeriodType:
+      description: Charging schedule period structure defines a time period in a charging schedule
+      type: object
+      required:
+        - start_period
+        - limit
+      properties:
+        start_period:
+          description: Start of the period, in seconds from the start of schedule. The value of StartPeriod also defines the stop time of the previous period
+          type: integer
+        limit: 
+          description: harging rate limit during the schedule period, in the applicable chargingRateUnit, for example in Amperes (A) or Watts (W). Accepts at most one digit fraction
+          type: number
+        number_phases:
+          description: The number of phases that can be used for charging
+          type: integer
+        phase_to_use:
+          description: Values 1..3, Used if numberPhases=1 and if the EVSE is capable of switching the phase connected to the EV, i.e. ACPhaseSwitchingSupported is defined and true
+          type: integer
+    
+    ChargingRateUnitEnumType:
+      description: Unit in which a charging schedule is defined
+      type: string
+      enum: [W, A]
+
+    ChargingProfilePurposeEnumType:
+      description: Defines the purpose of the schedule
+      type: string
+      enum: [ChargingStationExternalConstraints, ChargingStationMaxProfile, TxDefaultProfile, TxProfile]
+
+    ChargingProfileKindEnumType:
+      description: Indicates the kind of schedule
+      type: string
+      enum: [Relative, Absolute, Recurring]
+
+    RecurrencyKindEnumType:
+      description: Indicates the start point of a recurrence
+      type: string
+      enum: [Daily, Weekly]
+    
+    # Authentication schemas
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "XYZ_user"
+        password:
+          type: string
+          example: "azerty"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token valid for 2 hours
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsInByZWZlcnJlZF91c2VybmFtZSI6InZlZGVjb21fdXNlciIsInJvbGVzIjoiY3BvIiwiZXhwIjoxNzU2ODA2OTQ0LCJpc3MiOiJWRURFQ09NIn0.M5w6Xn5hVjX8IidoQB2J30mMgTlF8q6h3UzSsJzBWI-UHGaVe_ytnLkqkEoSANVrJ9o3pbmLDjXcSvY1Rguzg2WIMh-zilU1H_iSKBjKAE49Pk5J--5TUI_BxIo7NlFTngwaOYKyNYF6NSSa7YxOcWKihTdr4KVLFk4nq0H1HS_2aFkOflX8QEmNabLxE2UthclQaIkxOst-6-a7AqfQ-AKkeTzrvQuhoVcELkyHFC-_ucXStMqj2Y8jZIi6SsxJPgp8kfSMmtKXjuifbC8wfAZUBhfrldktpRhkpett3Qvi6W2pWrFzfwZCP8yQZpCdp02a_TMDX6JtWC9M2q9HFQ"
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+          example: 7200
+
+    # OCPP Action schemas
+    SetVariablesRequest:
+      type: object
+      required:
+        - component
+        - variable
+        - attribute_value
+      properties:
+        component:
+          $ref: '#/components/schemas/ComponentType'
+        variable:
+          $ref: '#/components/schemas/VariableType'
+        attribute_value:
+          description: Value to be assigned to attribute of variable. This value is allowed to be an empty string ("")
+          type: string
+        attribute_type:
+          $ref: '#/components/schemas/AttributeEnumType'
+
+    SetVariablesResponse:
+      type: object
+      required:
+        - attribute_status
+        - component
+        - variable
+      properties:
+        attribute_status:
+          description: Result status of setting the variable.
+          type: string
+          enum: [Accepted, Rejected, UnknownComponent, UnknownVariable, NotSupportedAttributeType, RebootRequired]
+        component:
+          $ref: '#/components/schemas/ComponentType'
+        variable:
+          $ref: '#/components/schemas/VariableType'
+        attribute_status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+        attribute_type:
+          $ref: '#/components/schemas/AttributeEnumType'
+
+    GetVariablesRequest:
+      type: object
+      required:
+        - component
+        - variable
+      properties:
+        component:
+          $ref: '#/components/schemas/ComponentType'
+        variable:
+          $ref: '#/components/schemas/VariableType'
+        attribute_type:
+          $ref: '#/components/schemas/AttributeEnumType'
+
+    GetVariablesResponse:
+      type: object
+      required:
+        - attribute_status
+        - component
+        - variable
+      properties:
+        attribute_status:
+          type: string
+          enum: [Accepted, Rejected, UnknownComponent, UnknownVariable, NotSupportedAttributeType]
+        component:
+          $ref: '#/components/schemas/ComponentType'
+        variable:
+          $ref: '#/components/schemas/VariableType'
+        attribute_status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+        attribute_value:
+          description: Value of requested attribute type of component- variable. This field can only be empty when the given status is NOT accepted
+          type: string
+        attribute_type:
+          $ref: '#/components/schemas/AttributeEnumType'
+
+    TriggerMessageRequest:
+      type: object
+      required:
+        - requested_message
+      properties:
+        requested_message:
+          type: string
+          description: Type of message to trigger
+          enum: [BootNotification, LogStatusNotification, FirmwareStatusNotification, Heartbeat, MeterValues, SignChargingStationCertificate, SignV2GCertificate, StatusNotification, TransactionEvent, SignCombinedCertificate, PublishFirmwareStatusNotification]
+        evse:
+          $ref: '#/components/schemas/EVSEType'
+
+    TriggerMessageResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Indicates whether the Charging Station will send the requested notification or not
+          type: string
+          enum: [Accepted, Rejected, NotImplemented]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    RequestStartTransactionRequest:
+      type: object
+      required:
+        - id_token
+        - remote_start_id
+      properties:
+        id_token:
+          $ref: '#/components/schemas/IdTokenType'
+        remote_start_id:
+          description: Id given by the server to this start request. The Charging Station will return this in the TransactionEventRequest, letting the server know which transaction was started for this request
+          type: integer
+        evse_id:
+          description: Number of the EVSE on which to start the transaction. EvseId SHALL be > 0
+          type: integer
+          minimum: 1
+        charging_profile:
+          description: Charging Profile to be used by the Charging Station for the requested transaction. ChargingProfilePurpose MUST be set to TxProfile
+          $ref: '#/components/schemas/ChargingProfileType'
+        group_id_token:
+          description: The groupIdToken is only relevant when the transaction is to be started on an EVSE for which a reservation for groupIdToken is active, and the configuration variable AuthorizeRemoteStart = false (otherwise the AuthorizeResponse could return the groupIdToken)
+          $ref: '#/components/schemas/IdTokenType'
+
+    RequestStartTransactionResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Status indicating whether the Charging Station accepts the request to start a transaction
+          $ref: '#/components/schemas/RequestStartStopStatusEnumType'
+        transaction_id:
+          description: This contains the transactionId of the already started transaction (e.g. cable plugged in first)
+          type: string
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+          
+    RequestStopTransactionRequest:
+      type: object
+      required:
+        - transaction_id
+      properties:
+        transaction_id:
+          description: The identifier of the transaction which the Charging Station is requested to stop
+          type: string
+
+    RequestStopTransactionResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Status indicating whether the Charging Station accepts the request to stop a transaction
+          $ref: '#/components/schemas/RequestStartStopStatusEnumType'
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    ResetRequest:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          description: This contains the type of reset that the Charging Station or EVSE should perform
+          type: string
+          enum: [Immediate, OnIdle]
+        evse:
+          description: This contains the ID of a specific EVSE that needs to be reset, instead of the entire Charging Station
+          type: integer
+
+    ResetResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Status indicating whether the Charging Station is able to perform the reset
+          type: string
+          enum: [Accepted, Rejected, Scheduled]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType' 
+
+    DataTransferRequest:
+      type: object
+      required:
+        - vendor_id
+      properties:
+        vendor_id:
+          description: This identifies the Vendor specific implementation
+          type: string
+        message_id:
+          description: May be used to indicate a specific message or implementation
+          type: string
+        data:
+          description: Data without specified length or format. This needs to be decided by both parties (Open to implementation)
+          anyOf:
+          - type: string
+          - type: number
+          - type: integer
+          - type: boolean
+          - type: array
+            items: {}
+          - type: object
+
+    DataTransferResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: This indicates the success or failure of the data transfer
+          type: string
+          enum: [Accepted, Rejected, UnknownMessageId, UnknownVendorId]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+        data:
+          description: Data without specified length or format, in response to request
+          anyOf:
+          - type: string
+          - type: number
+          - type: integer
+          - type: boolean
+          - type: array
+            items: {}
+          - type: object
+
+    GetTransactionStatusRequest:
+      type: object
+      properties:
+        transaction_id:
+          description: The Id of the transaction for which the status is requested
+          type: string
+
+    GetTransactionStatusResponse:
+      type: object
+      required:
+        - messages_in_queue
+      properties:
+        messages_in_queue:
+          description: Whether there are still message to be delivered
+          type: boolean
+        ongoing_indicator:
+          description: Whether the transaction is still ongoing
+          type: boolean
+
+    InstallCertificateRequest:
+      type: object
+      required:
+        - certificate_type
+        - certificate
+      properties:
+        certificate_type:
+          description: Indicates the certificate type that is sent
+          type: string
+          enum: [V2GRootCertificate, MORootCertificate, CSMSRootCertificate, ManufacturerRootCertificate]
+        certificate:
+          description: A PEM encoded X.509 certificate
+          type: string
+
+    InstallCertificateResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Charging Station indicates if installation was successful
+          type: string
+          enum: [Accepted, Rejected, Failed]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    GetChargingProfilesRequest:
+      type: object
+      required:
+        - request_id
+        - charging_profile
+      properties:
+        evse_id:
+          description: For which EVSE installed charging profiles SHALL be reported. If 0, only charging profiles installed on the Charging Station itself (the grid connection) SHALL be reported. If omitted, all installed charging profiles SHALL be reported. Reported charging profiles SHALL match the criteria in field chargingProfile
+          type: integer
+        request_id:
+          description: Reference identification that is to be used by the Charging Station in the ReportChargingProfilesRequest when provided
+          type: integer
+        charging_profile:
+          description: Specifies the charging profile
+          type: object
+          properties:
+            charging_profile_id:
+              description: List of all the chargingProfileIds requested. Any ChargingProfile that matches one of these profiles will be reported. If omitted, the Charging Station SHALL not filter on chargingProfileId. This field SHALL NOT contain more ids than set in ChargingProfileEntries.maxLimit
+              type: array
+              items:
+                type: integer
+            stack_level:
+              type: integer
+            charging_profile_purpose:
+              $ref: '#/components/schemas/ChargingProfilePurposeEnumType'
+            charging_limit_source:
+              description: For which charging limit sources, charging profiles SHALL be reported. If omitted, the Charging Station SHALL not filter on chargingLimitSource
+              type: array
+              items:
+                type: string
+                enum: [EMS, Other, CSO, SO]
+
+    GetChargingProfilesResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: This indicates whether the Charging Station is able to process this request and will send ReportChargingProfilesRequest messages
+          type: string
+          enum: [Accepted, NoProfiles]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    SetChargingProfileRequest:
+      type: object
+      required:
+        - evse_id
+        - charging_profile
+      properties:
+        evse_id:
+          description: For TxDefaultProfile an evseId=0 applies the profile to each individual evse. For ChargingStationMaxProfile and ChargingStationExternalConstraints an evseId=0 contains an overal limit for the whole Charging Station
+          type: integer
+        charging_profile:
+          description: The charging profile to be set at the Charging Station
+          $ref: '#/components/schemas/ChargingProfileType'
+
+    SetChargingProfileResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: Returns whether the Charging Station has been able to process the message successfully. This does not guarantee the schedule will be followed to the letter. There might be other constraints the Charging Station may need to take into account
+          type: string
+          enum: [Accepted, Rejected]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    ChangeAvailabilityRequest:
+      type: object
+      required:
+        - operational_status
+      properties:
+        operational_status:
+          description: This contains the type of availability change that the Charging Station should perform
+          type: string
+          enum: [Operative, Inoperative]
+        evse:
+          description: Contains Id’s to designate a specific EVSE/connector by index numbers. When omitted, the message refers to the Charging Station as a whole
+          $ref: '#/components/schemas/EVSEType'
+
+    ChangeAvailabilityResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: This indicates whether the Charging Station is able to perform the availability change
+          type: string
+          enum: [Accepted, Rejected, Scheduled]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    SendLocalListRequest:
+      type: object
+      required:
+        - version_number
+        - update_type
+      properties:
+        version_number:
+          description: In case of a full update this is the version number of the full list. In case of a differential update it is the version number of the list after the update has been applied
+          type: integer
+        update_type:
+          description: This contains the type of update (full or differential) of this request
+          type: string
+          enum: [Full, Differential]
+        local_authorization_list:
+          description: This contains the Local Authorization List entries
+          type: array
+          items:
+            type: object
+            required:
+              - id_token
+            properties:
+              id_token_info:
+                description: Required when UpdateType is Full. This contains information about authorization status, expiry and group id. For a Differential update the following applies If this element is present, then this entry SHALL be added or updated in the Local Authorization List. If this element is absent, the entry for this IdToken in the Local Authorization List SHALL be deleted
+                $ref: '#/components/schemas/IdTokenInfoType'
+              id_token:
+                description: This contains the identifier which needs to be stored for authorization
+                $ref: '#/components/schemas/IdTokenType'
+
+    SendLocalListResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          description: This indicates whether the Charging Station has successfully received and applied the update of the Local Authorization List
+          type: string
+          enum: [Accepted, Failed, VersionMismatch]
+        status_info:
+          $ref: '#/components/schemas/StatusInfoType'
+
+    SetRestrictedStatusRequest:
+      type: object
+      required:
+        - new_status
+      properties:
+        new_status:
+          description: New restricted status to set
+          type: boolean
+
+    SetBlacklistedStatusRequest:
+      type: object
+      required:
+        - new_status
+      properties:
+        new_status:
+          description: New blacklisted status to set
+          type: boolean
+
+    # CSMS Administration schemas
+    AddChargePointRequest:
+      type: object
+      required:
+        - cp_id
+        - ocpp_version
+        - basic_auth_password
+      properties:
+        cp_id:
+          description: Identity of the charging station (OCPP SecurityCtrlr.Identity)
+          type: string
+        ocpp_version:
+          type: string
+          enum: ["2.0.1", "2.1"]
+        basic_auth_password:
+          description: Basic auth password for security profile 1 (OCPP SecurityCtrlr.BasicAuthPassword)
+          type: string
+
+    AddCPORequest:
+      type: object
+      required:
+        - username
+        - password
+        - role
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [CPO, ADMIN, EV_USER]
+
+    # OCPI schemas
+    RegisterAsSenderRequest:
+      type: object
+      required:
+        - token
+        - versions_endpoints
+      properties:
+        token:
+          type: string
+        versions_endpoints:
+          type: string
+          format: uri
+
+    OCPICredentials:
+      type: object
+      required:
+        - token
+        - url
+        - roles
+      properties:
+        token:
+          type: string
+        url:
+          type: string
+          format: uri
+        roles:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - role
+              - business_details
+              - party_id
+              - country_code
+            properties:
+              role:
+                type: string
+                enum: [CPO, EMSP, HUB, NAP, NSP, OTHER, SCSP]
+              business_details:
+                type: object
+                required:
+                  - name
+                properties:
+                  name: 
+                    type: string
+                  website:
+                    type: string
+                    format: uri
+                  logo:
+                    type: object
+                    required:
+                      - url
+                      - category
+                      - type
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                      thumbnail:
+                        type: string
+                        format: uri
+                      category:
+                        type: string
+                        enum: [CHARGER, ENTRANCE, LOCATION, NETWORK, OPERATOR, OTHER, OWNER]
+                      type:
+                        type: string
+                        example: png
+                      width:
+                        type: integer
+                      height:
+                        type: integer
+              party_id:
+                type: string
+              country_code:
+                type: string
+
+    OCPIVersion:
+      type: object
+      required:
+        - version
+        - url
+      properties:
+        version:
+          type: string
+          enum: ["2.0", "2.1", "2.1.1", "2.2", "2.2.1"]
+        url:
+          type: string
+          format: uri
+
+    OCPIVersionDetails:
+      type: object
+      required:
+        - version
+        - endpoints
+      properties:
+        version:
+          type: string
+          enum: ["2.0", "2.1", "2.1.1", "2.2", "2.2.1"]
+        endpoints:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - identifier
+              - role
+              - url
+            properties:
+              identifier:
+                type: string
+                enum: [cdrs, chargingprofiles, commands, credentials, hubclientinfo, locations, sessions, tariffs, tokens]
+              role:
+                type: string
+                enum: [SENDER, RECEIVER]
+              url:
+                type: string
+                format: uri
+
+    OCPISession:
+      type: object
+      required:
+        - country_code
+        - party_id
+        - id
+        - start_date_time
+        - kwh
+        - cdr_token
+        - auth_method
+        - location_id
+        - evse_uid
+        - connector_id
+        - currency
+        - status
+        - last_updated
+      properties:
+        country_code:
+          type: string
+        party_id:
+          type: string
+        id:
+          type: string
+        start_date_time:
+          type: string
+          format: date-time
+        end_date_time:
+          type: string
+          format: date-time
+        kwh:
+          type: number
+        cdr_token:
+          type: object
+          required:
+            - country_code
+            - party_id
+            - uid
+            - type
+            - contract_id
+          properties:
+            country_code:
+              type: string
+            party_id:
+              type: string
+            uid:
+              type: string
+            type:
+              type: string
+              enum: [AD_HOC_USER, APP_USER, OTHER, RFID]
+            contract_id:
+              type: string
+        auth_method:
+          type: string
+          enum:  [AUTH_REQUEST, COMMAND, WHITELIST]
+        authorization_reference:
+          type: string
+        location_id:
+          type: string
+        evse_uid:
+          type: string
+        connector_id:
+          type: string
+        meter_id:
+          type: string
+        currency:
+          type: string
+        charging_periods:
+          type: object
+          required:
+            - start_date_time
+            - dimensions
+          properties:
+            start_date_time:
+              type: string
+              format: date-time
+            tariff_id:
+              type: string
+            dimensions:
+              type: array
+              items:
+                type: object
+                required:
+                  - type
+                  - volume
+                properties:
+                  type:
+                    type: string
+                    enum: [CURRENT, ENERGY, ENERGY_EXPORT, ENERGY_IMPORT, MAX_CURRENT, MIN_CURRENT, MAX_POWER, MIN_POWER, PARKING_TIME, POWER, RESERVATION_TIME, STATE_OF_CHARGE, TIME]
+                  volume:
+                    type: number
+        total_cost:
+          type: object
+          required:
+            - excl_vat
+          properties:
+            excl_vat:
+              type: number
+            incl_vat: 
+              type: number
+        status:
+          type: string
+          enum: [ACTIVE, COMPLETED, INVALID, PENDING, RESERVATION]
+        last_updated:
+          type: string
+          format: date-time
+
+    OCPISetChargingProfile:
+      type: object
+      required:
+        - charging_profile
+        - response_url
+      properties:
+        charging_profile:
+          type: object
+          required:
+            - charging_rate_unit
+            - charging_profile_period
+          properties:
+            start_date_time:
+              type: string
+              format: date-time
+            duration:
+              type: integer
+            charging_rate_unit:
+              type: string
+              enum: [W, A]
+            min_charging_rate:
+              type: number
+            charging_profile_period:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required:
+                  - start_period
+                  - limit
+                properties:
+                  start_period:
+                    type: integer
+                  limit:
+                    type: number
+        response_url:
+          type: string
+          format: uri
+
+    OCPIChargingProfileResponse:
+      type: object
+      required:
+        - result
+        - timeout
+      properties:
+        result:
+          type: string
+          enum: [ACCEPTED, NOT_SUPPORTED, REJECTED, TOO_OFTEN, UNKNOWN_SESSION]
+        timeout:
+          type: integer
+
+tags:
+  - name: Authentication
+    description: CSMS API user access
+  - name: OCPP Actions
+    description: OCPP 2.0.1/2.1 operations for charging station management
+  - name: CSMS Administration
+    description: CSMS system administration and user management
+  - name: OCPI Actions
+    description: OCPI 2.2.1 protocol operations supported by this CSMS

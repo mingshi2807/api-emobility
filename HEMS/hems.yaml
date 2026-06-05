@@ -1,0 +1,707 @@
+openapi: "3.0.3"
+info:
+  title: HEMS-SCPA API
+  description: |
+    Home Energy Management System (HEMS) API documentation.
+
+    The system provides:
+    - A **WebSocket** endpoint (`/ws`) for real-time bidirectional communication between the frontend SPA and the HEMS engine
+    - An **OCPP Proxy WebSocket** server for proxying OCPP charge point connections to an external CSMS
+    - **MQTT** topics for site energy data ingestion (PV, grid, household, runtime)
+
+    ## Protocols
+    The HEMS engine supports multiple communication protocols with charging equipment:
+    - **EEBUS** (default) – SPINE-based communication with EEBUS-compatible EVSEs
+    - **OCPP** – Open Charge Point Protocol via the built-in proxy server
+    - **None** – No protocol adapter (simulation/testing mode)
+
+    ## Configuration
+    The system is configured via `config.yaml`. Key settings:
+    - `api.port` – HTTP/WebSocket server port (default: `7050`)
+    - `hems.activeprotocol` – Active protocol (`eebus`, `ocpp`, `none`)
+    - `hems.proxy.listenport` – OCPP proxy WebSocket port (default: `8887`)
+    - `siteinput.kind` – Site input mode (`none`, `mqtt`)
+  version: "1.0.0"
+  contact:
+    name: HEMS-SCPA Team
+
+servers:
+  - url: http://localhost:7050
+    description: Local development server
+  - url: https://{host}:7050
+    description: Production server
+    variables:
+      host:
+        default: hems.local
+
+security: []
+
+paths:
+  /ws:
+    get:
+      summary: WebSocket endpoint for real-time HEMS communication
+      description: |
+        Upgrades the HTTP connection to a WebSocket connection. This is the primary
+        communication channel between the frontend SPA and the HEMS engine.
+
+        Messages are JSON-encoded text frames using the `ChargingMessage` wrapper format.
+      operationId: websocketConnect
+      tags:
+        - WebSocket
+      responses:
+        "101":
+          description: Switching Protocols – WebSocket connection established
+        "400":
+          description: Bad Request – WebSocket upgrade failed
+      x-websocket-handler: serveWs
+
+  /studio:
+    get:
+      summary: Redirect to Scenario Studio
+      description: Redirects (301) to `/studio/` which serves the Scenario Studio static frontend.
+      operationId: redirectToStudio
+      tags:
+        - Static Files
+      responses:
+        "301":
+          description: Redirect to /studio/
+
+  /studio/:
+    get:
+      summary: Scenario Studio frontend
+      description: Serves the Scenario Studio single-page application (embedded dist-studio).
+      operationId: serveStudio
+      tags:
+        - Static Files
+      responses:
+        "200":
+          description: Scenario Studio SPA
+
+  /:
+    get:
+      summary: Main frontend SPA
+      description: Serves the main HEMS frontend single-page application (embedded dist).
+      operationId: serveFrontend
+      tags:
+        - Static Files
+      responses:
+        "200":
+          description: Main HEMS SPA
+
+  /ws/{id}:
+    get:
+      summary: OCPP Proxy WebSocket endpoint
+      description: |
+        OCPP charge points connect to this endpoint. The proxy forwards OCPP messages
+        to the configured external CSMS (`ws://localhost:9000/ws` by default).
+      operationId: ocppProxyConnect
+      tags:
+        - OCPP Proxy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Charge point identifier
+      responses:
+        "101":
+          description: Switching Protocols – OCPP WebSocket connection established
+        "400":
+          description: Bad Request – WebSocket upgrade failed
+
+x-mqtt-topics:
+  description: |
+    When `siteinput.kind` is set to `mqtt`, the HEMS subscribes to the following
+    MQTT topics for real-time site energy data ingestion.
+  broker:
+    default: tcp://127.0.0.1:1883
+  topics:
+    - topic: hems/siteinput/pv
+      description: Photovoltaic production data
+      schema:
+        $ref: '#/components/schemas/MQTTPVPayload'
+    - topic: hems/siteinput/grid
+      description: Grid connection data
+      schema:
+        $ref: '#/components/schemas/MQTTGridPayload'
+    - topic: hems/siteinput/household
+      description: Household consumption data
+      schema:
+        $ref: '#/components/schemas/MQTTHouseholdPayload'
+    - topic: hems/siteinput/runtime
+      description: Runtime telemetry events
+      schema:
+        $ref: '#/components/schemas/MQTTRuntimePayload'
+
+x-websocket-messages:
+  description: |
+    ## WebSocket Communication Protocol
+
+    All messages are JSON-encoded text frames wrapped in the `ChargingMessage` envelope:
+
+    ```json
+    {"type": "<message_type>", "data": <payload>}
+    ```
+
+    Additionally, legacy `Message` format messages are sent for EEBUS operations:
+
+    ```json
+    {"name": "<message_name>", "ski": "...", "services": [...], "enable": true}
+    ```
+  server-to-client:
+    - type: full_update
+      description: Complete EV + EVSE charging session snapshot
+      data:
+        $ref: '#/components/schemas/ChargingSessionData'
+    - type: ev_update
+      description: EV state update (partial)
+      data:
+        $ref: '#/components/schemas/LegacyEV'
+    - type: evse_update
+      description: EVSE state update (partial)
+      data:
+        $ref: '#/components/schemas/LegacyEVSE'
+    - type: ev_connected
+      description: EV connected event
+      data:
+        $ref: '#/components/schemas/LegacyEV'
+    - type: ev_disconnected
+      description: EV disconnected event
+    - type: evse_connected
+      description: EVSE connected event
+      data:
+        $ref: '#/components/schemas/LegacyEVSE'
+    - type: evse_disconnected
+      description: EVSE disconnected event
+    - type: sim_display_power
+      description: Energy dashboard / power display update
+      data:
+        $ref: '#/components/schemas/EnergyDisplay'
+    - type: live_site_input_status
+      description: Live site input toggle status
+      data:
+        type: object
+        properties:
+          enabled:
+            type: boolean
+    - type: integration_status
+      description: MQTT/CSMS/ChargePoint connection status
+      data:
+        $ref: '#/components/schemas/IntegrationStatus'
+  client-to-server:
+    - type: requestFullUpdate
+      description: Request full EV/EVSE state snapshot from the server
+      data: {}
+    - type: requestUpdateSetpoint
+      description: Request to set the charge power setpoint
+      data:
+        oneOf:
+          - type: number
+            format: double
+          - type: string
+        description: Setpoint value in Watts (as float64 or string)
+        example: 6000
+    - type: requestSetLiveSiteInput
+      description: Toggle live site input mode on/off
+      data:
+        type: boolean
+        description: true to enable live site input, false to disable
+        example: true
+  legacy-messages:
+    - name: allowremote
+      description: Enable/Disable allowing remote EEBUS connections for trust
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [allowremote]
+          enable:
+            type: boolean
+    - name: serviceslist
+      description: List of discovered EEBUS services
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [serviceslist]
+          services:
+            type: array
+            items:
+              $ref: '#/components/schemas/ServiceItem'
+    - name: service
+      description: Specific EEBUS service item
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [service]
+          ski:
+            type: string
+          services:
+            type: array
+            items:
+              $ref: '#/components/schemas/ServiceItem'
+    - name: pair
+      description: Pairing request with a remote EEBUS service
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [pair]
+          ski:
+            type: string
+    - name: abort
+      description: Abort or deny the pairing process
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [abort]
+          ski:
+            type: string
+    - name: unpair
+      description: Unpair request from a remote EEBUS service
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [unpair]
+          ski:
+            type: string
+    - name: discovery
+      description: SPINE discovery data for a remote service
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [discovery]
+          ski:
+            type: string
+          discovery:
+            type: string
+            description: SPINE discovery JSON string
+    - name: usecase
+      description: SPINE usecase data for a remote service
+      payload:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [usecase]
+          ski:
+            type: string
+          usecase:
+            type: string
+            description: SPINE usecase JSON string
+
+components:
+  schemas:
+    # ── WebSocket Envelope ──────────────────────────────────────────
+    ChargingMessage:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          description: Message type identifier
+          example: full_update
+        data:
+          description: Message payload (varies by type)
+
+    Message:
+      type: object
+      description: Legacy EEBUS message format
+      properties:
+        name:
+          $ref: '#/components/schemas/MessageName'
+        ski:
+          type: string
+          description: SKI of the target service
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceItem'
+        enable:
+          type: boolean
+          description: Used with allowremote
+
+    MessageName:
+      type: string
+      enum:
+        - service
+        - serviceslist
+        - pair
+        - abort
+        - unpair
+        - discovery
+        - usecase
+        - allowremote
+
+    MessageType:
+      type: string
+      enum:
+        - full_update
+        - ev_update
+        - evse_update
+        - ev_connected
+        - ev_disconnected
+        - evse_connected
+        - evse_disconnected
+        - sim_display_power
+        - live_site_input_status
+        - integration_status
+        - requestFullUpdate
+        - requestUpdateSetpoint
+        - requestSetLiveSiteInput
+
+    # ── Charging Session ────────────────────────────────────────────
+    ChargingSessionData:
+      type: object
+      properties:
+        protocol:
+          type: string
+          description: Active protocol name (eebus, ocpp, none)
+          example: eebus
+        ev:
+          $ref: '#/components/schemas/LegacyEV'
+        evse:
+          $ref: '#/components/schemas/LegacyEVSE'
+
+    LegacyEV:
+      type: object
+      description: Electric Vehicle state
+      properties:
+        evConnected:
+          type: boolean
+          description: Whether an EV is connected
+        deviceName:
+          type: string
+          description: EV device name
+        stateOfCharge:
+          type: integer
+          description: Current state of charge (percentage)
+          minimum: 0
+          maximum: 100
+        chargePowerMax:
+          type: number
+          format: double
+          description: Maximum charge power (W)
+        chargePowerMin:
+          type: number
+          format: double
+          description: Minimum charge power (W)
+        dischargePowerMin:
+          type: number
+          format: double
+          description: Minimum discharge power (W)
+        dischargePowerMax:
+          type: number
+          format: double
+          description: Maximum discharge power (W)
+        presentActivePower:
+          type: number
+          format: double
+          description: Current active power consumption (W)
+        presentReactivePower:
+          type: integer
+          description: Current reactive power (var)
+        isAsymmetricCharging:
+          type: boolean
+        communicationStandard:
+          type: string
+        identification:
+          type: string
+        evTargetEnergyRequest:
+          type: integer
+          format: int64
+        evMaximumEnergyRequest:
+          type: integer
+          format: int64
+        evMinimumEnergyRequest:
+          type: integer
+          format: int64
+        evMaximumV2XEnergyRequest:
+          type: integer
+          format: int64
+        evMinimumV2XEnergyRequest:
+          type: integer
+          format: int64
+        evMinimumSOC:
+          type: integer
+          description: Minimum allowed state of charge (%)
+        evMaximumSOC:
+          type: integer
+          description: Maximum allowed state of charge (%)
+        evTargetSOC:
+          type: integer
+          description: Target state of charge (%)
+        evDepartureTime:
+          type: string
+          format: date-time
+          description: Planned departure time
+
+    LegacyEVSE:
+      type: object
+      description: Electric Vehicle Supply Equipment state
+      properties:
+        evseConnected:
+          type: boolean
+          description: Whether EVSE is connected
+        deviceName:
+          type: string
+        operatingState:
+          type: string
+          description: EVSE operating state
+        evseChargePowerMin:
+          type: number
+          format: double
+        evseChargePowerMax:
+          type: number
+          format: double
+        evseDischargePowerMin:
+          type: number
+          format: double
+        evseDischargePowerMax:
+          type: number
+          format: double
+        evseTargetActivePowerMax:
+          type: number
+          format: double
+        evsePresentActivePower:
+          type: number
+          format: double
+        evseTargetReactivePower:
+          type: integer
+          format: int64
+        lastUpdated:
+          type: string
+          format: date-time
+
+    # ── Energy Display (sim_display_power) ─────────────────────────
+    EnergyDisplay:
+      type: object
+      properties:
+        max_power_subscription:
+          type: number
+          format: double
+          description: Maximum subscribed grid power (kW)
+        pv_production:
+          type: number
+          format: double
+          description: Current PV production (kW)
+        production_excess:
+          type: number
+          format: double
+          description: Excess PV production (kW)
+        grid_import:
+          type: number
+          format: double
+          description: Grid import power (kW)
+        household_consumption:
+          type: number
+          format: double
+          description: Household consumption (kW)
+        active_setpoint:
+          type: number
+          format: double
+          description: Active charging setpoint (kW)
+        total_load:
+          type: number
+          format: double
+          description: Total site load (kW)
+        grid_utilization:
+          type: number
+          format: double
+          description: Grid utilization percentage
+        power_balance:
+          type: number
+          format: double
+          description: Power balance (kW)
+        export_enabled:
+          type: boolean
+          description: Whether energy export is enabled
+        event:
+          type: string
+          description: Current runtime event label
+        external_event:
+          type: string
+          description: External mode event (e.g., ocpp, gridcode)
+
+    # ── Integration Status ──────────────────────────────────────────
+    IntegrationStatus:
+      type: object
+      properties:
+        mqtt_connected:
+          type: boolean
+          description: MQTT broker connection status
+        mqtt_error:
+          type: string
+          description: MQTT connection error message (if any)
+        csms_connected:
+          type: boolean
+          description: CSMS WebSocket connection status
+        csms_error:
+          type: string
+          description: CSMS connection error message (if any)
+        charge_point_connected:
+          type: boolean
+          description: OCPP charge point connection status
+        charge_point_error:
+          type: string
+          description: Charge point error message (if any)
+
+    # ── EEBUS Service Item ─────────────────────────────────────────
+    ServiceItem:
+      type: object
+      properties:
+        ski:
+          type: string
+          description: Service SKI
+        trusted:
+          type: boolean
+          description: Whether the service is trusted
+        state:
+          type: integer
+          description: Connection state
+        error:
+          type: string
+          description: Connection error message
+        brand:
+          type: string
+          description: Service brand
+        model:
+          type: string
+          description: Service model
+        itself:
+          type: boolean
+          description: Whether this entry represents the local service
+        discovery:
+          type: string
+          description: SPINE discovery JSON data
+        usecase:
+          type: string
+          description: SPINE usecase JSON data
+
+    # ── HEMS Decision ───────────────────────────────────────────────
+    HEMSDecision:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        power_balance:
+          type: number
+          format: double
+          description: Power balance (kW)
+        grid_export:
+          type: number
+          format: double
+          description: Grid export (kW)
+        grid_import:
+          type: number
+          format: double
+          description: Grid import (kW)
+        charging_setpoint:
+          type: number
+          format: double
+          description: Recommended charging setpoint (kW)
+        recommendation:
+          type: string
+          description: HEMS recommendation
+
+    # ── MQTT Site Input Payloads ────────────────────────────────────
+    MQTTPVPayload:
+      type: object
+      required: [production_kw]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Measurement timestamp
+        production_kw:
+          type: number
+          format: double
+          description: PV production in kW
+      example:
+        production_kw: 5.2
+        timestamp: "2026-06-04T12:00:00Z"
+
+    MQTTGridPayload:
+      type: object
+      required: [max_power_subscription_kw]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        max_power_subscription_kw:
+          type: number
+          format: double
+          description: Maximum subscribed grid power (kW)
+      example:
+        max_power_subscription_kw: 12.0
+
+    MQTTHouseholdPayload:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        fixed_load_kw:
+          type: number
+          format: double
+          description: Fixed household load (kW)
+        random_load_kw:
+          type: number
+          format: double
+          description: Random/variable household load (kW)
+        heat_pump_load_kw:
+          type: number
+          format: double
+          description: Heat pump consumption (kW)
+        water_heater_load_kw:
+          type: number
+          format: double
+          description: Water heater consumption (kW)
+        total_load_kw:
+          type: number
+          format: double
+          description: Total household load (kW). If omitted, it is computed as the sum of the components.
+      example:
+        fixed_load_kw: 0.3
+        random_load_kw: 0.5
+        total_load_kw: 0.8
+
+    MQTTRuntimePayload:
+      type: object
+      properties:
+        source:
+          type: string
+          description: Source identifier (defaults to "mqtt")
+          example: simulation
+        timestamp:
+          type: string
+          format: date-time
+        time_display:
+          type: string
+          description: Display time string
+          example: "12:00"
+        event:
+          type: string
+          description: Runtime event name
+          example: "charging_started"
+        external_mode:
+          type: string
+          description: External mode identifier
+          example: "ocpp"
+        duration_sec:
+          type: integer
+          description: Duration in seconds
+          example: 3600

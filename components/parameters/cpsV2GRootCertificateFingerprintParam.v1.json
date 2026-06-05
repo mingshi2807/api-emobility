@@ -1,0 +1,4 @@
+{
+  "type": "string",
+  "description": "SHA-256 fingerprint of the CPS V2G root certificate."
+}

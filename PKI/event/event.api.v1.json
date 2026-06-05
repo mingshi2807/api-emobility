@@ -1,0 +1,32 @@
+{
+    "openapi":"3.0.2",
+    "info": {
+      "title":"Event API",
+      "version":"1.0",
+      "description": "Event Notification services API.",
+      "contact": {
+        "name": "CharIN e.V.",
+        "url": "https://charin.global",
+        "email": "coordination@charin.global"
+      },
+      "license": {
+        "name": "Attribution-ShareAlike 4.0 International",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      }
+    },
+    "servers": [
+      {"url":"https://api.server.test/opnc/v1/event"}
+    ],
+    "security": [],
+    "tags": [],
+    "paths": {
+      "/opnc/v1/event/endpoints": {
+        "$ref": "./event.api.v1.endpoints.json"
+      },
+      "/opnc/v1/event/endpoints/{id}": {
+        "$ref": "./event.api.v1.endpointsById.json"
+      }
+    }
+}
+      
+  

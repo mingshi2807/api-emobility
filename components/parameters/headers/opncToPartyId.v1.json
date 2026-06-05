@@ -1,0 +1,9 @@
+{
+  "name": "OPNC-To-Party-ID",
+  "in": "header",
+  "required": true,
+  "description": "Identifier of the request target party.",
+  "schema": {
+    "type": "string"
+  }
+}

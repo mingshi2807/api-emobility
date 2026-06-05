@@ -1,0 +1,9 @@
+{
+  "type": "string",
+  "description": "ISO 15118 version.",
+  "enum": [
+    "ISO15118-2",
+    "ISO15118-20"
+  ],
+  "default": "ISO15118-2"
+}

@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "description": "Certificate authority domain.",
+  "enum": [
+    "cpo",
+    "emsp",
+    "oem",
+    "cps"
+  ]
+}
