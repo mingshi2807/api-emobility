@@ -3,6 +3,8 @@ extends:
 
 rules:
   no-path-trailing-slash: warn
+  operation-summary: warn
+  security-defined: warn
 
 logo:
   srcSet: "./logo-vedecom.png light, ./logo-vedecom-dark.png dark"
@@ -25,18 +27,52 @@ apis:
     root: ./ev-virtualizer/ev-virtualizer.yaml
   charge-point@v1:
     root: ./charge-point/charge-point-api.yaml
+  charge-point-combocs-core@v1:
+    root: ./charge-point/combocs-api-core.yaml
+  charge-point-evse-charge-broker@v1:
+    root: ./charge-point/evse-charge-broker-api.yaml
+  charge-point-evse-combocs@v1:
+    root: ./charge-point/evse-combocs-api.yaml
+  charge-point-evse-ems@v1:
+    root: ./charge-point/evse-ems-api.yaml
   pki-ccp@v1:
     root: ./PKI/ccp/ccp.api.v1.json
   pki-cps@v1:
     root: ./PKI/cps/cps.api.v1.json
   pki-event@v1:
     root: ./PKI/event/event.api.v1.json
+  pki-event-webhook-payload@v1:
+    root: ./PKI/event/webhook.payload.v1.json
   pki-pcp@v1:
     root: ./PKI/pcp/pcp.api.v1.json
   pki-pki@v1:
     root: ./PKI/pki/pki.api.v1.json
   pki-rcp@v1:
     root: ./PKI/rcp/rcp.api.v1.json
+
+catalog:
+  apis:
+    title: VEDECOM eMobility APIs
+    description: All standalone OpenAPI descriptions in this repository.
+    items:
+      - api: erm@v1
+      - api: hems@v1
+      - api: obc@v1
+      - api: ocpp-ocpi@v1
+      - api: openadr@v1
+      - api: ev-virtualizer@v1
+      - api: charge-point@v1
+      - api: charge-point-combocs-core@v1
+      - api: charge-point-evse-charge-broker@v1
+      - api: charge-point-evse-combocs@v1
+      - api: charge-point-evse-ems@v1
+      - api: pki-ccp@v1
+      - api: pki-cps@v1
+      - api: pki-event@v1
+      - api: pki-event-webhook-payload@v1
+      - api: pki-pcp@v1
+      - api: pki-pki@v1
+      - api: pki-rcp@v1
 
 openapi:
   requiredPropsFirst: true
