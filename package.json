@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "Redocly Realm documentation workspace for VEDECOM eMobility APIs.",
+  "dependencies": {
+    "@redocly/cli": "2.31.6",
+    "@redocly/realm": "0.133.1"
+  },
   "scripts": {
     "lint": "redocly lint",
     "lint:dist": "redocly lint --config redocly.dist.yaml",

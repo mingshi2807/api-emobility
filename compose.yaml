@@ -1,0 +1,13 @@
+services:
+  redocly-realm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vedecom-emobility-apis:redocly-2.31.6
+    container_name: vedecom-emobility-apis
+    environment:
+      PORT: "4000"
+      REDOCLY_SUPPRESS_UPDATE_NOTICE: "true"
+    ports:
+      - "4000:4000"
+    restart: unless-stopped

@@ -2,3 +2,4 @@
 dist/
 node_modules/
 .redocly-preview-dist/
+note_tmp.txt
