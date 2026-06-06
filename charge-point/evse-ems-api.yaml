@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   description: >-
-    <strong>EVSE EMS Ctrl</strong>, the EVSE EMS Controller made by <em>TRIALOG</em>, offers an <strong>HTTP/WS API</strong> to control the Energy Management System.
+    <strong>EVSE EMS Ctrl</strong>, the EVSE EMS Controller made by <em>VEDECOM</em>, offers an <strong>HTTP/WS API</strong> to control the Energy Management System.
     <br /><br />
     This document describes the "Controller" <strong>HTTP</strong> API for the EVSE EMS.
     <br />
@@ -18,13 +18,13 @@ info:
   title: EVSE EMS "Controller" HTTP/WS API Documentation
   termsOfService: '#'
   contact:
-    email: contact@trialog.com
+    email: contact@emobility-vedecom.fr
   license:
-    name: 'TRIALOG'
-    url: 'https://trialog.com/'
+    name: 'VEDECOM'
+    url: 'https://vedecom.fr/'
 
 servers:
-  - url: http://192.168.200.113/api
+  - url: http://192.168.xx.xx/api
     
 tags:
   - name: EMS Control

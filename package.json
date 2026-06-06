@@ -5,8 +5,11 @@
   "description": "Redocly Realm documentation workspace for VEDECOM eMobility APIs.",
   "scripts": {
     "lint": "redocly lint",
+    "lint:dist": "redocly lint --config redocly.dist.yaml",
     "bundle": "redocly bundle",
     "preview": "redocly preview --product=realm --port=4000",
-    "preview:realm": "redocly preview --product=realm --port=4000"
+    "preview:realm": "redocly preview --product=realm --port=4000",
+    "preview:dist": "npm run bundle && sh scripts/preview-dist.sh",
+    "preview:dist:no-bundle": "sh scripts/preview-dist.sh"
   }
 }

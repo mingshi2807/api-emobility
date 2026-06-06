@@ -15,58 +15,58 @@ logo:
 apis:
   erm@v1:
     root: ./ERM/openapi.yaml
-    output: ./dist/erm.openapi.json
+    output: ./dist/ERM/openapi.yaml
   hems@v1:
     root: ./HEMS/hems.yaml
-    output: ./dist/hems.openapi.json
+    output: ./dist/HEMS/hems.yaml
   obc@v1:
     root: ./OBC/openapi.yaml
-    output: ./dist/obc.openapi.json
+    output: ./dist/OBC/openapi.yaml
   ocpp-ocpi@v1:
     root: ./OCPP_OCPI/openapi.yaml
-    output: ./dist/ocpp-ocpi.openapi.json
+    output: ./dist/OCPP_OCPI/openapi.yaml
   openadr@v1:
     root: ./OpenADR/openapi-bundle.yml
-    output: ./dist/openadr.openapi.json
+    output: ./dist/OpenADR/openapi-bundle.yml
   ev-virtualizer@v1:
     root: ./ev-virtualizer/ev-virtualizer.yaml
-    output: ./dist/ev-virtualizer.openapi.json
+    output: ./dist/ev-virtualizer/ev-virtualizer.yaml
   charge-point@v1:
     root: ./charge-point/charge-point-api.yaml
-    output: ./dist/charge-point.openapi.json
+    output: ./dist/charge-point/charge-point-api.yaml
   charge-point-combocs-core@v1:
     root: ./charge-point/combocs-api-core.yaml
-    output: ./dist/charge-point-combocs-core.openapi.json
+    output: ./dist/charge-point/combocs-api-core.yaml
   charge-point-evse-charge-broker@v1:
     root: ./charge-point/evse-charge-broker-api.yaml
-    output: ./dist/charge-point-evse-charge-broker.openapi.json
+    output: ./dist/charge-point/evse-charge-broker-api.yaml
   charge-point-evse-combocs@v1:
     root: ./charge-point/evse-combocs-api.yaml
-    output: ./dist/charge-point-evse-combocs.openapi.json
+    output: ./dist/charge-point/evse-combocs-api.yaml
   charge-point-evse-ems@v1:
     root: ./charge-point/evse-ems-api.yaml
-    output: ./dist/charge-point-evse-ems.openapi.json
+    output: ./dist/charge-point/evse-ems-api.yaml
   pki-ccp@v1:
     root: ./PKI/ccp/ccp.api.v1.json
-    output: ./dist/pki-ccp.openapi.json
+    output: ./dist/PKI/ccp/ccp.api.v1.json
   pki-cps@v1:
     root: ./PKI/cps/cps.api.v1.json
-    output: ./dist/pki-cps.openapi.json
+    output: ./dist/PKI/cps/cps.api.v1.json
   pki-event@v1:
     root: ./PKI/event/event.api.v1.json
-    output: ./dist/pki-event.openapi.json
+    output: ./dist/PKI/event/event.api.v1.json
   pki-event-webhook-payload@v1:
     root: ./PKI/event/webhook.payload.v1.json
-    output: ./dist/pki-event-webhook-payload.openapi.json
+    output: ./dist/PKI/event/webhook.payload.v1.json
   pki-pcp@v1:
     root: ./PKI/pcp/pcp.api.v1.json
-    output: ./dist/pki-pcp.openapi.json
+    output: ./dist/PKI/pcp/pcp.api.v1.json
   pki-pki@v1:
     root: ./PKI/pki/pki.api.v1.json
-    output: ./dist/pki-pki.openapi.json
+    output: ./dist/PKI/pki/pki.api.v1.json
   pki-rcp@v1:
     root: ./PKI/rcp/rcp.api.v1.json
-    output: ./dist/pki-rcp.openapi.json
+    output: ./dist/PKI/rcp/rcp.api.v1.json
 
 catalogClassic:
   apis:

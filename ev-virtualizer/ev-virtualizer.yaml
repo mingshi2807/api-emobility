@@ -29,7 +29,7 @@ info:
     | Server→Client | raw | `/charge-type/{type}\n` | Charge type notification broadcast |
 
   contact:
-    name: VEDECOM / TRIALOG
+    name: VEDECOM
   version: "1.0.0"
 
 servers:

@@ -1,0 +1,75 @@
+extends:
+  - recommended
+
+rules:
+  no-path-trailing-slash: warn
+  operation-summary: warn
+  security-defined: warn
+
+logo:
+  srcSet: "./logo-vedecom.png light, ./logo-vedecom-dark.png dark"
+  altText: VEDECOM logo
+  link: "https://vedecom.fr"
+  favicon: ./favicon-vedecom.png
+
+apis:
+  erm@v1:
+    root: ./dist/ERM/openapi.yaml
+  hems@v1:
+    root: ./dist/HEMS/hems.yaml
+  obc@v1:
+    root: ./dist/OBC/openapi.yaml
+  ocpp-ocpi@v1:
+    root: ./dist/OCPP_OCPI/openapi.yaml
+  openadr@v1:
+    root: ./dist/OpenADR/openapi-bundle.yml
+  ev-virtualizer@v1:
+    root: ./dist/ev-virtualizer/ev-virtualizer.yaml
+  charge-point@v1:
+    root: ./dist/charge-point/charge-point-api.yaml
+  charge-point-combocs-core@v1:
+    root: ./dist/charge-point/combocs-api-core.yaml
+  charge-point-evse-charge-broker@v1:
+    root: ./dist/charge-point/evse-charge-broker-api.yaml
+  charge-point-evse-combocs@v1:
+    root: ./dist/charge-point/evse-combocs-api.yaml
+  charge-point-evse-ems@v1:
+    root: ./dist/charge-point/evse-ems-api.yaml
+  pki-ccp@v1:
+    root: ./dist/PKI/ccp/ccp.api.v1.json
+  pki-cps@v1:
+    root: ./dist/PKI/cps/cps.api.v1.json
+  pki-event@v1:
+    root: ./dist/PKI/event/event.api.v1.json
+  pki-event-webhook-payload@v1:
+    root: ./dist/PKI/event/webhook.payload.v1.json
+  pki-pcp@v1:
+    root: ./dist/PKI/pcp/pcp.api.v1.json
+  pki-pki@v1:
+    root: ./dist/PKI/pki/pki.api.v1.json
+  pki-rcp@v1:
+    root: ./dist/PKI/rcp/rcp.api.v1.json
+
+catalogClassic:
+  apis:
+    title: VEDECOM eMobility APIs
+    description: All standalone OpenAPI descriptions in this repository.
+    items:
+      - api: erm@v1
+      - api: hems@v1
+      - api: obc@v1
+      - api: ocpp-ocpi@v1
+      - api: openadr@v1
+      - api: ev-virtualizer@v1
+      - api: charge-point@v1
+      - api: charge-point-combocs-core@v1
+      - api: charge-point-evse-charge-broker@v1
+      - api: charge-point-evse-combocs@v1
+      - api: charge-point-evse-ems@v1
+      - api: pki-ccp@v1
+      - api: pki-cps@v1
+      - api: pki-event@v1
+      - api: pki-event-webhook-payload@v1
+      - api: pki-pcp@v1
+      - api: pki-pki@v1
+      - api: pki-rcp@v1

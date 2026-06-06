@@ -1,20 +1,20 @@
 openapi: 3.0.0
 info:
   description: >-
-    <strong>ComboCS</strong>, the CCS Simulator and Tester made by <em>TRIALOG</em>, offers an <strong>HTTP/WS API</strong> to communicate with ComboCS for test automation. 
+    <strong>ComboCS</strong>, the CCS Simulator and Tester made by <em>VEDECOM</em>, offers an <strong>HTTP/WS API</strong> to communicate with ComboCS for test automation. 
     <br /><br />
     This document describe the HTTP/WS API for both EV and EVSE versions of ComboCS. Resources only available for one version is indicated as "Only available for EV/EVSE ComboCS" in the rest of the document. Aller <code>GET</code> methods are also available as WebSocket notifications.
   version: 1.0.0
   title: ComboCS HTTP/WS API Documentation
   termsOfService: '#'
   contact:
-    email: contact@trialog.com
+    email: contact@emobility-vedecom.fr
   license:
-    name: Trialog
-    url: 'https://trialog.com/'
+    name: Vedecom
+    url: 'https://vedecom.fr/'
 
 servers:
-  - url: http://192.168.200.113/api
+  - url: http://192.168.xx.xx/api
     
 tags:
   - name: EV settings
