@@ -3,8 +3,9 @@ set -eu
 
 preview_dir=".redocly-preview-dist"
 mkdir -p "$preview_dir"
+rm -f "$preview_dir/readme.md"
 cp logo-vedecom.png logo-vedecom-dark.png favicon-vedecom.png "$preview_dir/"
-cp AGENTS.md readme.md "$preview_dir/"
+cp AGENTS.md index.md "$preview_dir/"
 if [ -L "$preview_dir/dist" ]; then
   rm "$preview_dir/dist"
 fi

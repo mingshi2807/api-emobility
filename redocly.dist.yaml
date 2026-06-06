@@ -7,8 +7,8 @@ rules:
   security-defined: warn
 
 redirects:
-  /:
-    to: /readme
+  /readme:
+    to: /
     type: 302
 
 logo:

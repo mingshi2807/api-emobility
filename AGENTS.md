@@ -8,7 +8,7 @@ These instructions apply to every file under this directory.
 
 ## Repository Shape
 
-- `readme.md` is the reader-facing overview of the VEDECOM eMobility API specifications. Keep it free of Redocly operational, configuration, and CLI content.
+- `index.md` is the reader-facing overview of the VEDECOM eMobility API specifications. It renders at `/` and must stay free of Redocly operational, configuration, and CLI content.
 - `AGENTS.md` is the operational guidance file for repository agents and maintainers. Keep Redocly commands, configuration notes, preview/build workflow, and deployment notes here.
 - `redocly.yaml` is the source Redocly configuration and theme entry point. API roots point to checked-in source specs and `output` fields mirror bundled artifacts into `dist/`.
 - `redocly.dist.yaml` is the bundled-artifact Redocly configuration. API roots point to `dist/` and preserve the same API ordering as `redocly.yaml`.
@@ -35,7 +35,7 @@ Current repository note: `redocly.yaml` registers the checked-in domain specs di
 - Keep operation IDs unique within each spec.
 - For Redocly warnings, fix regressions introduced by the current change first. Existing baseline issues are present and should not be treated as newly caused without evidence.
 - Do not add new dependencies unless the user explicitly asks. This repo currently pins Redocly tooling in `package.json` and `package-lock.json`.
-- Keep reader-facing API descriptions in `readme.md`; keep Redocly operations in `AGENTS.md`.
+- Keep reader-facing API descriptions in `index.md`; keep Redocly operations in `AGENTS.md`.
 
 ## Redocly Commands
 
@@ -114,7 +114,9 @@ Warnings are currently accepted; blocking errors should be fixed.
 ## Redocly Configuration Notes
 
 - `redocly.yaml` and `redocly.dist.yaml` must keep the same `catalogClassic.apis.items` ordering so the sidebar organization remains stable between source and bundled previews.
-- The root route is intentionally redirected to `/readme` so the reader overview is the main index page instead of `/agents`.
+- Do not add a root `sidebars.yaml` unless the full navigation model is being redesigned. Without that file, Realm preserves the generated navigation and the API catalog/theme separation from `catalogClassic`.
+- `redocly.yaml` ignores generated folders such as `dist` and `.redocly-preview-dist` so source preview does not render bundled artifacts or temporary preview copies as documentation pages.
+- The reader overview lives in `index.md`, so `http://localhost:4000/` displays the README content directly. `/readme` is kept as a backward-compatible redirect to `/`.
 - `catalogClassic.apis.title` is the API catalog heading shown for the standalone API specifications.
 - `rules.operation-summary` and `rules.security-defined` are currently warnings. Do not treat existing warnings as blockers unless the user asks to resolve warnings.
 - Top-level Realm display options such as `requiredPropsFirst`, `pathInMiddlePanel`, `hideHostname`, `expandResponses`, `jsonSampleExpandLevel`, `payloadSampleIdx`, `showObjectSchemaExamples`, `generateCodeSamples`, and nested `openapi.theme` are not valid in the current config shape and should not be reintroduced.
@@ -131,6 +133,76 @@ docker compose up --build
 The container uses Redocly CLI `2.31.6`, installs production npm dependencies, runs `npm run bundle` during image build, and serves the bundled-artifact preview on port `4000`.
 
 The compose service maps host port `4000` to container port `4000`. Change the compose port mapping if the host already uses that port.
+
+Useful Docker commands:
+
+Build the image directly:
+
+```bash
+docker build -t vedecom-emobility-apis:redocly-2.31.6 .
+```
+
+Run the image directly on port `4000`:
+
+```bash
+docker run --rm -p 4000:4000 vedecom-emobility-apis:redocly-2.31.6
+```
+
+Start or rebuild with Compose:
+
+```bash
+docker compose up --build
+```
+
+Start Compose in the background:
+
+```bash
+docker compose up --build -d
+```
+
+Follow service logs:
+
+```bash
+docker compose logs -f
+```
+
+Stop containers without deleting volumes:
+
+```bash
+docker compose down
+```
+
+Stop containers and remove Compose volumes plus orphan containers:
+
+```bash
+docker compose down -v --remove-orphans
+```
+
+List local images for this project:
+
+```bash
+docker images | grep vedecom-emobility-apis
+```
+
+Remove a specific image by image ID:
+
+```bash
+docker rmi -f <Image ID>
+```
+
+Remove dangling images and build cache:
+
+```bash
+docker image prune -f
+docker builder prune -f
+```
+
+Inspect running containers:
+
+```bash
+docker compose ps
+docker ps
+```
 
 ## Known Baseline Validation Status
 
