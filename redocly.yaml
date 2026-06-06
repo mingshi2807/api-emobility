@@ -50,7 +50,7 @@ apis:
   pki-rcp@v1:
     root: ./PKI/rcp/rcp.api.v1.json
 
-catalog:
+catalogClassic:
   apis:
     title: VEDECOM eMobility APIs
     description: All standalone OpenAPI descriptions in this repository.
@@ -73,36 +73,6 @@ catalog:
       - api: pki-pcp@v1
       - api: pki-pki@v1
       - api: pki-rcp@v1
-
-openapi:
-  requiredPropsFirst: true
-  pathInMiddlePanel: true
-  hideHostname: false
-  expandResponses: "200,201"
-  jsonSampleExpandLevel: 2
-  payloadSampleIdx: 0
-  showObjectSchemaExamples: true
-  generateCodeSamples:
-    languages:
-      - lang: curl
-      - lang: JavaScript
-        label: fetch
-      - lang: Python
-      - lang: Go
-  theme:
-    colors:
-      primary:
-        main: "#0F766E"
-      success:
-        main: "#0ea5e9"
-    typography:
-      fontSize: "16"
-      fontFamily: "Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
-      headings:
-        fontWeight: "600"
-    rightPanel:
-      backgroundColor: "#0b1021"
-      textColor: "#ffffff"
 
 # (Later) Resolve settings when pulling remote $refs
 # resolve:
