@@ -15,40 +15,58 @@ logo:
 apis:
   erm@v1:
     root: ./ERM/openapi.yaml
+    output: ./dist/erm.openapi.json
   hems@v1:
     root: ./HEMS/hems.yaml
+    output: ./dist/hems.openapi.json
   obc@v1:
     root: ./OBC/openapi.yaml
+    output: ./dist/obc.openapi.json
   ocpp-ocpi@v1:
     root: ./OCPP_OCPI/openapi.yaml
+    output: ./dist/ocpp-ocpi.openapi.json
   openadr@v1:
     root: ./OpenADR/openapi-bundle.yml
+    output: ./dist/openadr.openapi.json
   ev-virtualizer@v1:
     root: ./ev-virtualizer/ev-virtualizer.yaml
+    output: ./dist/ev-virtualizer.openapi.json
   charge-point@v1:
     root: ./charge-point/charge-point-api.yaml
+    output: ./dist/charge-point.openapi.json
   charge-point-combocs-core@v1:
     root: ./charge-point/combocs-api-core.yaml
+    output: ./dist/charge-point-combocs-core.openapi.json
   charge-point-evse-charge-broker@v1:
     root: ./charge-point/evse-charge-broker-api.yaml
+    output: ./dist/charge-point-evse-charge-broker.openapi.json
   charge-point-evse-combocs@v1:
     root: ./charge-point/evse-combocs-api.yaml
+    output: ./dist/charge-point-evse-combocs.openapi.json
   charge-point-evse-ems@v1:
     root: ./charge-point/evse-ems-api.yaml
+    output: ./dist/charge-point-evse-ems.openapi.json
   pki-ccp@v1:
     root: ./PKI/ccp/ccp.api.v1.json
+    output: ./dist/pki-ccp.openapi.json
   pki-cps@v1:
     root: ./PKI/cps/cps.api.v1.json
+    output: ./dist/pki-cps.openapi.json
   pki-event@v1:
     root: ./PKI/event/event.api.v1.json
+    output: ./dist/pki-event.openapi.json
   pki-event-webhook-payload@v1:
     root: ./PKI/event/webhook.payload.v1.json
+    output: ./dist/pki-event-webhook-payload.openapi.json
   pki-pcp@v1:
     root: ./PKI/pcp/pcp.api.v1.json
+    output: ./dist/pki-pcp.openapi.json
   pki-pki@v1:
     root: ./PKI/pki/pki.api.v1.json
+    output: ./dist/pki-pki.openapi.json
   pki-rcp@v1:
     root: ./PKI/rcp/rcp.api.v1.json
+    output: ./dist/pki-rcp.openapi.json
 
 catalogClassic:
   apis:

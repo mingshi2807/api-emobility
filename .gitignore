@@ -1,1 +1,3 @@
 .omx/
+dist/
+node_modules/

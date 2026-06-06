@@ -1,0 +1,12 @@
+{
+  "name": "vedecom-emobility-apis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Redocly Realm documentation workspace for VEDECOM eMobility APIs.",
+  "scripts": {
+    "lint": "redocly lint",
+    "bundle": "redocly bundle",
+    "preview": "redocly preview --product=realm --port=4000",
+    "preview:realm": "redocly preview --product=realm --port=4000"
+  }
+}
