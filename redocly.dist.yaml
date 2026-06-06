@@ -6,6 +6,11 @@ rules:
   operation-summary: warn
   security-defined: warn
 
+redirects:
+  /:
+    to: /readme
+    type: 302
+
 logo:
   srcSet: "./logo-vedecom.png light, ./logo-vedecom-dark.png dark"
   altText: VEDECOM logo

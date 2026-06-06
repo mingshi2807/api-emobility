@@ -11,7 +11,7 @@ RUN npm ci --omit=dev
 
 COPY redocly.yaml redocly.dist.yaml ./
 COPY scripts ./scripts
-COPY AGENTS.md ./
+COPY AGENTS.md readme.md ./
 COPY logo-vedecom.png logo-vedecom-dark.png favicon-vedecom.png ./
 COPY ERM ./ERM
 COPY HEMS ./HEMS
